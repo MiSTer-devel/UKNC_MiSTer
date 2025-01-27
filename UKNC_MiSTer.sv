@@ -348,7 +348,7 @@ pll pll (
    .outclk_1 (clk_25),    // 24MHz
    .outclk_2 (clk_12_5),  // 12,5MHz
    .outclk_3 (clk_6_25),  // 6,25MHz
-   .outclk_4 (SDRAM_CLK), // 50MHz 90 shift
+//   .outclk_4 (SDRAM_CLK), // 50MHz 90 shift
    .locked   (sys_plock)    // флаг готовности PLL
 );
 
@@ -411,7 +411,7 @@ UKNC UKNC (
    .SDRAM_nRAS    (SDRAM_nRAS),     // SDRAM Row Address Strobe
    .SDRAM_nCS     (SDRAM_nCS),      // SDRAM Chip Select
    .SDRAM_BA      (SDRAM_BA),       // SDRAM Bank Address 0,1
-//   .SDRAM_CLK     (SDRAM_CLK),      // SDRAM Clock
+   .SDRAM_CLK     (SDRAM_CLK),      // SDRAM Clock
    .SDRAM_CKE     (SDRAM_CKE) 
 );
 

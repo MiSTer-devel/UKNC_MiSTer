@@ -10,7 +10,7 @@ module ppu_wb(
     output  [3:0] mask_ram,
     output        read_ram,
     output        wrte_ram,
-    input         askn_ram,
+    input         ackn_ram,
 
     output        vm_init,
     output        vm_dclo,
@@ -114,7 +114,7 @@ always @(*)
     default:  wbm_dat_i <= 16'o0;
     endcase
 
-assign wbm_ack_i = (ask | askn_ram | pin_wbm_ack_i) & wbm_stb_o;
+assign wbm_ack_i = (ask | ackn_ram | pin_wbm_ack_i) & wbm_stb_o;
 assign duot_ram = rio_ram_wr ? ramd_rio : {wbm_dat_o,wbm_dat_o};
 assign mask_ram = (rio_ram_wr | rio_ram_rd) ? mask_rio : {2'b11,~wbm_sel_o};
 assign read_ram = (ram_rd | rio_ram_rd) & wbm_stb_o;
@@ -192,8 +192,8 @@ always @(posedge vm_clk_p)
         mask_rio      <= 4'b1100;
         R177054       <= 10'o1401;
     end else begin
-        if(askn_ram & rio_ram_rd & !read_177124){R177014,R177012} <= dinp_ram;
-        if(askn_ram & rio_ram_rd &  read_177124){R177022,R177020} <= {o177022_out,o177020_out};
+        if(ackn_ram & rio_ram_rd & !read_177124){R177014,R177012} <= dinp_ram;
+        if(ackn_ram & rio_ram_rd &  read_177124){R177022,R177020} <= {o177022_out,o177020_out};
         wbm_stb_o_old <= wbm_stb_o;
         if(!wbm_stb_o)begin
             rom <= 1'b0;

@@ -65,7 +65,7 @@ wire [15:0] data_cpu_o;
 wire        read_cpu_o;
 wire        wrte_cpu_o;
 wire  [3:0] mask_cpu_o;
-wire        askn_cpu_i;
+wire        ackn_cpu_i;
 
 wire [15:0] addr_ppu_o;
 wire [31:0] data_ppu_i;
@@ -73,7 +73,7 @@ wire [31:0] data_ppu_o;
 wire        read_ppu_o;
 wire        wrte_ppu_o;
 wire  [3:0] mask_ppu_o;
-wire        askn_ppu_i;
+wire        ackn_ppu_i;
 //------------------------------------------------------------//
 sdram sdram(
    // interface to the MT48LC16M16 chip
@@ -106,7 +106,7 @@ sdram sdram(
    .cpu_dqm    (mask_cpu_o),
    .cpu_read   (read_cpu_o),
    .cpu_wrte   (wrte_cpu_o),
-   .cpu_asck   (askn_cpu_i),
+   .cpu_ack    (ackn_cpu_i),
 
    .ppu_addr   (addr_ppu_o),
    .ppu_dout   (data_ppu_i),
@@ -114,7 +114,7 @@ sdram sdram(
    .ppu_dqm    (mask_ppu_o),
    .ppu_read   (read_ppu_o),
    .ppu_wrte   (wrte_ppu_o),
-   .ppu_asck   (askn_ppu_i)
+   .ppu_ack    (ackn_ppu_i)
 );
 //------------------------------------------------------------//
 //  Wishbone PPU
@@ -231,7 +231,7 @@ ppu_wb ppu1(
    .mask_ram    (mask_ppu_o),
    .read_ram    (read_ppu_o),
    .wrte_ram    (wrte_ppu_o),
-   .askn_ram    (askn_ppu_i),
+   .ackn_ram    (ackn_ppu_i),
 
    .vm_init     (ppu_vm_init_o),
    .vm_dclo     (ppu_vm_dclo_o),
@@ -432,7 +432,7 @@ cpu_wb cpu1(
    .mask_ram    (mask_cpu_o),
    .read_ram    (read_cpu_o),
    .wrte_ram    (wrte_cpu_o),
-   .askn_ram    (askn_cpu_i),
+   .ackn_ram    (ackn_cpu_i),
 
    .vm_init     (cpu_vm_init_o),
    .vm_dclo     (cpu_vm_dclo_i),

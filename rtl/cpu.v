@@ -9,7 +9,7 @@ module cpu_wb(
     output  [3:0] mask_ram,
     output        read_ram,
     output        wrte_ram,
-    input         askn_ram,
+    input         ackn_ram,
 
     output        vm_init,
     input         vm_dclo,
@@ -82,7 +82,7 @@ always @(*)
     default: wbm_dat_loc <= 16'o0;
     endcase
 
-wire  wbm_ack_loc = (ask | askn_ram | wbm_ack_i) & wbm_stb_o;
+wire  wbm_ack_loc = (ask | ackn_ram | wbm_ack_i) & wbm_stb_o;
 
 assign dout_ram = rio_ram_wr ? ramd_rio : wbm_dat_o;
 assign mask_ram = rio_ram_wr ? {mask_rio[3:2],2'b11} : {~wbm_sel_o,2'b11};
@@ -145,7 +145,7 @@ always @(posedge vm_clk_p)
         mask_rio <= 4'b0000;
         ramd_rio[15:0] <= 16'h0000;
     end else begin
-        if(askn_ram & rio_ram_rd) R176642 <= dinp_ram;
+        if(ackn_ram & rio_ram_rd) R176642 <= dinp_ram;
         wbm_stb_o_old <= wbm_stb_o;
         if(!wbm_stb_o)begin
             ram_rd <= 1'b0;

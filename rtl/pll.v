@@ -115,7 +115,7 @@ endmodule
 // Retrieval info: 	<generic name="gui_actual_output_clock_frequency4" value="0 MHz" />
 // Retrieval info: 	<generic name="gui_ps_units4" value="degrees" />
 // Retrieval info: 	<generic name="gui_phase_shift4" value="0" />
-// Retrieval info: 	<generic name="gui_phase_shift_deg4" value="45.0" />
+// Retrieval info: 	<generic name="gui_phase_shift_deg4" value="90.0" />
 // Retrieval info: 	<generic name="gui_actual_phase_shift4" value="0" />
 // Retrieval info: 	<generic name="gui_duty_cycle4" value="50" />
 // Retrieval info: 	<generic name="gui_cascade_counter5" value="false" />

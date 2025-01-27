@@ -44,7 +44,7 @@ module  pll_0002(
 		.phase_shift3("0 ps"),
 		.duty_cycle3(50),
 		.output_clock_frequency4("50.000000 MHz"),
-		.phase_shift4("2500 ps"),
+		.phase_shift4("5000 ps"),
 		.duty_cycle4(50),
 		.output_clock_frequency5("0 MHz"),
 		.phase_shift5("0 ps"),
