@@ -7,13 +7,12 @@ module sdram(
    output            SDRAM_nWE,     // write enable
    output            SDRAM_nRAS,    // row address select
    output            SDRAM_nCAS,    // columns address select
-   output reg        SDRAM_DQML,
-   output reg        SDRAM_DQMH,
+   output            SDRAM_DQML,
+   output            SDRAM_DQMH,
    output            SDRAM_CLK,
 
    // cpu/chipset interface
    input             clk_50,      // sdram is accessed at up to 128MHz
-   input             clk_25,
    input             lockclk,
    output            init,     // init signal after FPGA config to initialize RAM
 
@@ -72,7 +71,7 @@ localparam CAS_LATENCY    = 3'd2;   // 2/3 allowed
 localparam OP_MODE        = 2'b00;  // only 00 (standard operation) allowed
 localparam NO_WRITE_BURST = 1'b1;   // 0= write burst enabled, 1=only single access write
 
-localparam MODE = { 1'b0, NO_WRITE_BURST, OP_MODE, CAS_LATENCY, ACCESS_TYPE, BURST_LENGTH}; 
+localparam MODE = { 3'b000, NO_WRITE_BURST, OP_MODE, CAS_LATENCY, ACCESS_TYPE, BURST_LENGTH}; 
 
 // ---------------------------------------------------------------------
 // ------------------------ cycle state machine ------------------------
@@ -83,54 +82,55 @@ localparam STATE_LAST      = 3'd7;   // last state in cycle
 // ---------------------------------------------------------------------
 
 // all possible commands
-localparam CMD_INHIBIT         = 4'b1111;
-localparam CMD_NOP             = 4'b0111;
-localparam CMD_ACTIVE          = 4'b0011;
-localparam CMD_READ            = 4'b0101;
-localparam CMD_WRITE           = 4'b0100;
-localparam CMD_BURST_TERMINATE = 4'b0110;
-localparam CMD_PRECHARGE       = 4'b0010;
-localparam CMD_AUTO_REFRESH    = 4'b0001;
-localparam CMD_LOAD_MODE       = 4'b0000;
+localparam CMD_NOP             = 3'b111;
+localparam CMD_ACTIVE          = 3'b011;
+localparam CMD_READ            = 3'b101;
+localparam CMD_WRITE           = 3'b100;
+localparam CMD_BURST_TERMINATE = 3'b110;
+localparam CMD_PRECHARGE       = 3'b010;
+localparam CMD_AUTO_REFRESH    = 3'b001;
+localparam CMD_LOAD_MODE       = 3'b000;
 
-reg  [ 4:0] reset = 5'h1f;
-reg  [ 3:0] sd_cmd = CMD_INHIBIT;   // current command sent to sd ram
+reg  [ 4:0] reset;
+wire [12:0] reset_addr = (reset == 13) ? 13'b0010000000000 : MODE;
+reg  [ 2:0] sd_cmd;   // current command sent to sd ram
 // drive control signals according to current command
-assign SDRAM_nCS  = sd_cmd[3];
+assign {SDRAM_DQMH,SDRAM_DQML} = SDRAM_A[12:11];
+assign SDRAM_nCS  = 1'b0;
 assign SDRAM_nRAS = sd_cmd[2];
 assign SDRAM_nCAS = sd_cmd[1];
 assign SDRAM_nWE  = sd_cmd[0];
-//assign SDRAM_DQ   = SDRAM_nWE ? 16'hZZZZ : SDRAM_DQR;
 assign init       = reset == 0;
 
-wire [12:0] reset_addr = (reset == 13) ? 13'b0010000000000 : MODE;
-
-wire [ 3:0] state;
-reg  [15:0] RAM_DATA = 0;
-reg  [10:0] horz     = 0;
-reg  [ 9:0] vert     = 0;
+reg  [15:0] RAM_DATA;
+reg  [10:0] horz;
+reg  [ 9:0] vert;
 wire        refresh  = horz[10:4] == 81;
-assign      state    = horz[3:0];
+wire [ 3:0] state    = horz[3:0];
 
 // ---------------------------------------------------------------------
 // UKNC Screen
 // ---------------------------------------------------------------------
-reg  [18:0] addr_blu   = 0;
-reg  [18:0] addr_gr    = 0;
-reg  [15:0] vga_adst   = 0;        // address string in memory
+reg  [18:0] addr_blu;
+reg  [18:0] addr_gr;
+reg  [15:0] vga_adst;        // address string in memory
 reg  [15:0] vga_adnx   = 16'o270;  // address next string
-reg  [31:0] vga_regi   = 0;        // vga register isobr
-reg  [31:0] vga_regc   = 0;        // vga register color
+reg  [31:0] vga_regi;        // vga register isobr
+reg  [31:0] vga_regc;        // vga register color
 
-reg         qutro_reg  = 0;
-reg         types_reg  = 0;
-reg         vga_curs   = 0;
-//reg         curs_set   = 0;
-reg  [ 7:0] blue_data  = 0;
-reg  [ 7:0] green_data = 0;
-reg  [ 7:0] red_data   = 0;
+reg         qutro_reg;
+reg         types_reg;
+reg         vga_curs;
 
-wire [15:0] addr_reg = qutro_reg ?  {vga_adnx[15:3],2'b00} : {vga_adnx[15:2],1'b0};
+reg  [ 7:0] blue_data;
+reg  [ 7:0] green_data;
+reg  [ 7:0] red_data;
+reg  [ 7:0] blue_;
+reg  [ 7:0] green_;
+reg  [ 7:0] red_;
+
+
+wire [15:0] addr_reg = qutro_reg ? {vga_adnx[15:3],2'b00} : {vga_adnx[15:2],1'b0};
 // ---------------------------------------------------------------------
 // PPU / CPU
 // ---------------------------------------------------------------------
@@ -192,11 +192,15 @@ always @(posedge clk_50) begin
    end
 
 // ---------------------------------------------------------------------
-// new screen 
+// new string
 // ---------------------------------------------------------------------
-   if ((horz[10:4] == 98 || horz[10:4] < 80) && state[3]) begin
-      addr_blu <= (vga_adst + adtx)>>1;
-      addr_gr  <=  vga_adst + adtx;
+  if (horz == 1583) begin
+      addr_blu <= vga_adst>>1;
+      addr_gr  <= vga_adst;
+   end
+   if (horz < 1264 && state[3]) begin
+      addr_blu <= (vga_adst + adtx + 1'b1)>>1;
+      addr_gr  <=  vga_adst + adtx + 1'b1;
    end
 //=======================================================================
 // Initial SDRAM
@@ -209,16 +213,12 @@ always @(posedge clk_50) begin
       if(state == 0) begin
          SDRAM_A    <= reset_addr;
          SDRAM_BA   <= 2'b00;
-         SDRAM_DQML <= 1;
-         SDRAM_DQMH <= 1;
          if (reset == 13)     sd_cmd <= CMD_PRECHARGE;
          else if (reset == 2) sd_cmd <= CMD_LOAD_MODE;
          else                 sd_cmd <= CMD_NOP;
       end else begin
          SDRAM_A    <= reset_addr;
          SDRAM_BA   <= 2'b00;
-         SDRAM_DQML <= 1;
-         SDRAM_DQMH <= 1;
          sd_cmd     <= CMD_NOP;
 
          cpu_ack <= 0;
@@ -232,8 +232,6 @@ always @(posedge clk_50) begin
    if (refresh) begin
          SDRAM_A      <= 13'h0000;
          SDRAM_BA     <= 2'b00;
-         SDRAM_DQML   <= 1;
-         SDRAM_DQMH   <= 1;
          if (state == STATE_LAST) sd_cmd <= CMD_AUTO_REFRESH;
          else               sd_cmd <= CMD_NOP;
    end else begin
@@ -250,35 +248,41 @@ always @(posedge clk_50) begin
                if (types_reg) vga_regc[15:0] <= RAM_DATA;
                else           vga_regi[15:0] <= RAM_DATA;
             end else          vga_adst       <= RAM_DATA;
-         end else blue_data <= addr_gr[0] ? RAM_DATA[15:8] : RAM_DATA[7:0];
+         end
 
          if (horz[10:4] == 83 && vert[0]) begin
             if (qutro_reg) begin
                if (types_reg) vga_regc[31:16] <= RAM_DATA;
                else           vga_regi[31:16] <= RAM_DATA;
             end else          vga_adnx        <= RAM_DATA;
-         end else blue_data <= addr_gr[0] ? RAM_DATA[15:8] : RAM_DATA[7:0];
+         end
 
          if (horz[10:4] == 84 && vert[0]) begin
             if (qutro_reg) vga_adst  <= RAM_DATA;
             else           types_reg <= vga_adnx[2];
-         end else blue_data <= addr_gr[0] ? RAM_DATA[15:8] : RAM_DATA[7:0];
+         end
 
          if (horz[10:4] == 85 && vert[0]) begin
             if (qutro_reg) begin
                vga_adnx  <= RAM_DATA;
-               //curs_set  <= RAM_DATA[0];
                vga_curs  <= RAM_DATA[0] ? ~vga_curs : vga_curs;
                qutro_reg <= RAM_DATA[1];
                types_reg <= RAM_DATA[2];
             end else begin
                qutro_reg <= vga_adnx[1];
                vga_curs  <= vga_adnx[0] ? ~vga_curs : vga_curs;
-               //curs_set  <= vga_adnx[0];
             end
-         end else blue_data <= !addr_gr[0] ? RAM_DATA[15:8] : RAM_DATA[7:0];
+         end
+         blue_data <= addr_gr[0] ? RAM_DATA[15:8] : RAM_DATA[7:0];
       end
-      if (state == 6) {green_data,red_data} <= RAM_DATA;
+      if (state == 6) begin
+         {green_data,red_data} <= RAM_DATA;
+      end
+      if (vga_regi[21:20] == 2 && state ==  7) begin
+         blue_  <= blue_data;
+         green_ <= green_data;
+         red_   <= red_data;
+      end
 // ---------------------------------------------------------------------
 // cpu/ppu 
 // ---------------------------------------------------------------------
@@ -316,6 +320,11 @@ always @(posedge clk_50) begin
          read_uknc_hi <= 0;
          wrte_uknc_lo <= 0;
          wrte_uknc_hi <= 0;
+         if (vga_regi[21:20] != 2) begin
+            blue_  <= blue_data;
+            green_ <= green_data;
+            red_   <= red_data;
+         end
       end
 //=======================================================================
 // sdram state m
@@ -326,60 +335,48 @@ always @(posedge clk_50) begin
 // blue CMD_ACTIVE
 // ---------------------------------------------------------------------
                sd_cmd     <= CMD_ACTIVE;
-               SDRAM_A    <= addr_blu[18:8];
+               SDRAM_A    <= {2'b00, addr_blu[18:8]};
                SDRAM_BA   <= 2'b00;
-               SDRAM_DQML <= 1'b1;
-               SDRAM_DQMH <= 1'b1;
             end
       'd1 : begin
 // ---------------------------------------------------------------------
 // green/red CMD_ACTIVE
 // ---------------------------------------------------------------------
                sd_cmd     <= CMD_ACTIVE;
-               SDRAM_A    <= addr_gr[18:8];
+               SDRAM_A    <= {2'b00, addr_gr[18:8]};
                SDRAM_BA   <= 2'b01;
-               SDRAM_DQML <= 1'b1;
-               SDRAM_DQMH <= 1'b1;
             end
       'd2 : begin
 // ---------------------------------------------------------------------
 // blue CMD_READ
 // ---------------------------------------------------------------------
                sd_cmd     <= CMD_READ;
-               SDRAM_A    <= { 3'b100,addr_blu[7:0]};
+               SDRAM_A    <= { 5'b00100,addr_blu[7:0]};
                SDRAM_BA   <= 2'b00;
-               SDRAM_DQML <= 1'b0;
-               SDRAM_DQMH <= 1'b0;
             end
       'd3 : begin
 // ---------------------------------------------------------------------
 // green/red CMD_READ
 // ---------------------------------------------------------------------
                sd_cmd     <= CMD_READ;
-               SDRAM_A    <= { 3'b100,addr_gr[7:0]};
+               SDRAM_A    <= { 5'b00100,addr_gr[7:0]};
                SDRAM_BA   <= 2'b01;
-               SDRAM_DQML <= 1'b0;
-               SDRAM_DQMH <= 1'b0;
             end
       'd8 : begin
 // ---------------------------------------------------------------------
 // ppu CMD_ACTIVE
 // ---------------------------------------------------------------------
                sd_cmd     <= CMD_ACTIVE;
-               SDRAM_A    <= addr_uknc_lo[18:8];
+               SDRAM_A    <= {2'b00, addr_uknc_lo[18:8]};
                SDRAM_BA   <= 2'b00;
-               SDRAM_DQML <= 1'b1;
-               SDRAM_DQMH <= 1'b1;
             end
       'd9 : begin
 // ---------------------------------------------------------------------
 // cpu CMD_ACTIVE
 // ---------------------------------------------------------------------
                sd_cmd     <= CMD_ACTIVE;
-               SDRAM_A    <= addr_uknc_hi[18:8];
+               SDRAM_A    <= {2'b00, addr_uknc_hi[18:8]};
                SDRAM_BA   <= 2'b01;
-               SDRAM_DQML <= 1'b1;
-               SDRAM_DQMH <= 1'b1;
             end
       'd10: begin
 // ---------------------------------------------------------------------
@@ -387,17 +384,13 @@ always @(posedge clk_50) begin
 // ---------------------------------------------------------------------
                if(wrte_uknc_lo)begin
                   sd_cmd     <= CMD_WRITE;
-                  SDRAM_A    <= { 3'b100,addr_uknc_lo[7:0]};
+                  SDRAM_A    <= {dqm_uknc_lo, 3'b100,addr_uknc_lo[7:0]};
                   SDRAM_BA   <= 2'b00;
                   SDRAM_DQ   <= din_uknc_lo;
-                  SDRAM_DQML <= dqm_uknc_lo[0];
-                  SDRAM_DQMH <= dqm_uknc_lo[1];
                end else begin
                   sd_cmd     <= CMD_READ;
-                  SDRAM_A    <= { 3'b100,addr_uknc_lo[7:0]};
+                  SDRAM_A    <= { 5'b00100,addr_uknc_lo[7:0]};
                   SDRAM_BA   <= 2'b00;
-                  SDRAM_DQML <= 1'b0;
-                  SDRAM_DQMH <= 1'b0;
                end
             end
       'd11: begin
@@ -406,25 +399,19 @@ always @(posedge clk_50) begin
 // ---------------------------------------------------------------------
                if(wrte_uknc_hi)begin
                   sd_cmd     <= CMD_WRITE;
-                  SDRAM_A    <= { 3'b100,addr_uknc_hi[7:0]};
+                  SDRAM_A    <= { dqm_uknc_hi, 3'b100,addr_uknc_hi[7:0]};
                   SDRAM_BA   <= 2'b01;
                   SDRAM_DQ   <= din_uknc_hi;
-                  SDRAM_DQML <= dqm_uknc_hi[0];
-                  SDRAM_DQMH <= dqm_uknc_hi[1];
                end else begin
                   sd_cmd     <= CMD_READ;
-                  SDRAM_A    <= { 3'b100,addr_uknc_hi[7:0]};
+                  SDRAM_A    <= { 5'b00100,addr_uknc_hi[7:0]};
                   SDRAM_BA   <= 2'b01;
-                  SDRAM_DQML <= 1'b0;
-                  SDRAM_DQMH <= 1'b0;
                end
             end
       default: begin
                sd_cmd     <= CMD_NOP;
-               SDRAM_A    <= 11'h000;
+               SDRAM_A    <= 13'h0000;
                SDRAM_BA   <= 2'b00;
-               SDRAM_DQML <= 1;
-               SDRAM_DQMH <= 1;
             end
       endcase
       end
@@ -449,26 +436,27 @@ assign visible = visible_x && visible_y;
 // tx   - смещение битов в байте, для сдвига
 //---------------------------------------------------------------------------------------------------------//
 wire [ 9:0]x  = horz[10:1];
-wire [ 9:0]xs = visible_x ? horz[10:1] - 10'd8 : 10'd0;
+
+wire [ 9:0]xs = horz[10:1] + 4;
 
 wire [ 9:0]adtx= vga_regi[21:20] == 0 ?  x[9:3] :
                  vga_regi[21:20] == 1 ?  x[9:4] :
-                 vga_regi[21:20] == 2 ?  x[9:5] :  x[9:6];
+                 vga_regi[21:20] == 2 ?  xs[9:5] : x[9:6];
 
-wire [ 9:0]indx= vga_regi[21:20] == 0 ? xs[9:3] :
-                 vga_regi[21:20] == 1 ? xs[9:4] :
-                 vga_regi[21:20] == 2 ? xs[9:5] : xs[9:6];
+wire [ 9:0]indx= vga_regi[21:20] == 0 ? x[9:3] :
+                 vga_regi[21:20] == 1 ? x[9:4] :
+                 vga_regi[21:20] == 2 ? xs[9:5] : x[9:6];
 
-wire [ 2:0]tx  = vga_regi[21:20] == 0 ? xs[2:0] :
-                 vga_regi[21:20] == 1 ? xs[3:1] :
-                 vga_regi[21:20] == 2 ? xs[4:2] : xs[5:3];
+wire [ 2:0]tx  = vga_regi[21:20] == 0 ? x[2:0] :
+                 vga_regi[21:20] == 1 ? x[3:1] :
+                 vga_regi[21:20] == 2 ? x[4:2] : x[5:3];
 
 reg  [ 2:0]tripl = 0;
 
-always @(posedge clk_25)begin
-        tripl[0] = blue_data [tx];
-        tripl[1] = green_data[tx];
-        tripl[2] = red_data  [tx];
+always @(posedge clk_50)begin
+        tripl[0] = blue_ [tx];
+        tripl[1] = green_[tx];
+        tripl[2] = red_  [tx];
     end
 
 reg  [ 3:0]cvt;
@@ -498,7 +486,7 @@ wire [ 2:0]curG = vga_regi[1] ? vga_regi[3] ? 3'b111: 3'b100 : 3'd0;
 wire [ 2:0]curB = vga_regi[0] ? vga_regi[3] ? 3'b111: 3'b100 : 3'd0;
 
 reg  [ 6:0] xcursor = 0;
-wire        cursor_pos = xcursor == indx;
+wire        cursor_pos = xcursor + 1'b1 == indx;
 wire        cursor_pos_byte = tx==vga_regi[7:5] || !vga_regi[4];
 wire        iscursor   = cursor_pos & vga_curs & cursor_pos_byte;
 

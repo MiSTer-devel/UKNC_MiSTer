@@ -89,7 +89,6 @@ sdram sdram(
    .SDRAM_CLK  (SDRAM_CLK),
    // cpu/chipset interface
    .clk_50     (clk_50),      // sdram is accessed at up to 128MHz
-   .clk_25     (clk_25),
    .lockclk    (locked),
    .init       (init),
 
