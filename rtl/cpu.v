@@ -47,20 +47,20 @@ wire        wbm_ios_o;
 
 wire        wbi_una_o;
 
-reg         ram_rd     = 0;
-reg         ram_wr     = 0;
-reg         rio        = 0;
-reg         rio_ram_wr = 0;
-reg         rio_ram_rd = 0;
-reg         ask        = 0;
+reg         ram_rd;
+reg         ram_wr;
+reg         rio;
+reg         rio_ram_wr;
+reg         rio_ram_rd;
+reg         ack;
 
 reg  [15:0] wbm_dat_loc;
-reg  [15:0] data_rio = 0;
-reg  [15:0] ramd_rio = 0;
-reg   [3:0] mask_rio = 0;
+reg  [15:0] data_rio;
+reg  [15:0] ramd_rio;
+reg   [3:0] mask_rio;
 
-reg  [15:0] R176640 = 0;
-reg  [15:0] R176642 = 0;
+reg  [15:0] R176640;
+reg  [15:0] R176642;
 //========================================================================================
 //  Wishbone out
 //========================================================================================
@@ -82,7 +82,7 @@ always @(*)
     default: wbm_dat_loc <= 16'o0;
     endcase
 
-wire  wbm_ack_loc = (ask | ackn_ram | wbm_ack_i) & wbm_stb_o;
+wire  wbm_ack_loc = (ack | ackn_ram | wbm_ack_i) & wbm_stb_o;
 
 assign dout_ram = rio_ram_wr ? ramd_rio : wbm_dat_o;
 assign mask_ram = rio_ram_wr ? {mask_rio[3:2],2'b11} : {~wbm_sel_o,2'b11};
@@ -138,7 +138,7 @@ always @(posedge vm_clk_p)
         ram_rd <= 1'b0;
         ram_wr <= 1'b0;
         rio <= 1'b0;
-        ask <= 1'b0;
+        ack <= 1'b0;
         wbm_stb_o_old <= 1'b0;
         rio_ram_wr <= 1'b0;
         rio_ram_rd <= 1'b0;
@@ -154,7 +154,7 @@ always @(posedge vm_clk_p)
             data_rio <= 16'o0;
             rio_ram_wr <= 1'b0;
             rio_ram_rd <= 1'b0;
-            ask <= 1'b0;
+            ack <= 1'b0;
         end else
         if(~wbm_stb_o_old & wbm_stb_o) begin
             if(wbm_adr_o[16])begin
@@ -162,36 +162,36 @@ always @(posedge vm_clk_p)
                 ram_rd <=~wbm_we_o;
                 ram_wr <= wbm_we_o;
                 rio    <= 1'b0;
-                ask    <= 1'b0;
+                ack    <= 1'b0;
             end else
             if(wbm_adr_o[15:9] < 'o160) begin
                 addr_ram <= wbm_adr_o[15:1];
                 ram_rd <=~wbm_we_o;
                 ram_wr <= wbm_we_o;
                 rio    <= 1'b0;
-                ask    <= 1'b0;
+                ack    <= 1'b0;
             end else begin
                 ram_rd <= 1'b0;
                 ram_wr <= 1'b0;
                 if(wbm_we_o) begin
-                    if(wbm_adr_o[9:1] == 'o270) begin
-                        ask <= 1'b0;
+                    if(wbm_adr_o[12:1] == 'o7270) begin
+                        ack <= 1'b0;
                     end else
-                    if(wbm_adr_o[9:1] == 'o271) begin
-                        ask <= 1'b1;
+                    if(wbm_adr_o[12:1] == 'o7271) begin
+                        ack <= 1'b1;
                     end else
-                    if(wbm_adr_o[9:1] == 'o272) begin
-                        ask <= 1'b0;
+                    if(wbm_adr_o[12:1] == 'o7272) begin
+                        ack <= 1'b0;
                     end else
-                    if(wbm_adr_o[9:1] == 'o273) begin
-                        ask <= 1'b1;
+                    if(wbm_adr_o[12:1] == 'o7273) begin
+                        ack <= 1'b1;
                     end else
-                    if(wbm_adr_o[9:1] == 'o320) begin
+                    if(wbm_adr_o[12:1] == 'o7320) begin
                         R176640[15:8]  <= wbm_sel_o[1] ? wbm_dat_o[15:8] : 8'o0;
                         R176640[ 7:0]  <= wbm_sel_o[0] ? wbm_dat_o[ 7:0] : 8'o0;
-                        ask            <= 1'b1;
+                        ack            <= 1'b1;
                     end else
-                    if(wbm_adr_o[9:1] == 'o321) begin
+                    if(wbm_adr_o[12:1] == 'o7321) begin
                         ramd_rio[15:8] <= wbm_sel_o[1] ? wbm_dat_o[15:8] : R176642[15:8];
                         ramd_rio[7:0]  <= wbm_sel_o[0] ? wbm_dat_o[ 7:0] : R176642[ 7:0];
                         R176642[15:8]   <= wbm_sel_o[1] ? wbm_dat_o[15:8] : R176642[15:8];
@@ -199,7 +199,7 @@ always @(posedge vm_clk_p)
                         addr_ram        <= R176640;
                         mask_rio        <= 4'b0011;
                         rio_ram_wr      <= 1'b1;
-                        ask             <= 1'b0;
+                        ack             <= 1'b0;
                     end else begin
                         ram_rd          <= 1'b0;
                         ram_wr          <= 1'b0;
@@ -207,59 +207,59 @@ always @(posedge vm_clk_p)
                         data_rio        <= 16'o0;
                         rio_ram_wr      <= 1'b0;
                         rio_ram_rd      <= 1'b0;
-                        ask             <= 1'b0;
+                        ack             <= 1'b0;
                     end
 
                 end else begin
 
-                    if(wbm_adr_o[9:1] == 'o270) begin
+                    if(wbm_adr_o[12:1] == 'o7270) begin
                         data_rio     <= 16'o0;
-                        ask          <= 1'b1;
+                        ack          <= 1'b1;
                         rio          <= 1'b1;
                     end else
-                    if(wbm_adr_o[9:1] == 'o271) begin
+                    if(wbm_adr_o[12:1] == 'o7271) begin
                         data_rio     <= 16'o0;
-                        ask          <= 1'b1;
+                        ack          <= 1'b1;
                         rio          <= 1'b1;
                     end else
-                    if(wbm_adr_o[9:1] == 'o272) begin
-                        ask <= 1'b1;
+                    if(wbm_adr_o[12:1] == 'o7272) begin
+                        ack <= 1'b1;
                     end else
-                    if(wbm_adr_o[9:1] == 'o273) begin
+                    if(wbm_adr_o[12:1] == 'o7273) begin
                         data_rio     <= 16'o0;
-                        ask          <= 1'b1;
+                        ack          <= 1'b1;
                         rio          <= 1'b1;
                     end else
-                    if(wbm_adr_o[9:1] == 'o274) begin
+                    if(wbm_adr_o[12:1] == 'o7274) begin
                         data_rio     <= 16'o0;
-                        ask          <= 1'b1;
+                        ack          <= 1'b1;
                         rio          <= 1'b1;
                     end else
-                    if(wbm_adr_o[9:1] == 'o275) begin
+                    if(wbm_adr_o[12:1] == 'o7275) begin
                         data_rio     <= 16'o0;
-                        ask          <= 1'b1;
+                        ack          <= 1'b1;
                         rio          <= 1'b1;
                     end else
-                    if(wbm_adr_o[9:1] == 'o276) begin
+                    if(wbm_adr_o[12:1] == 'o7276) begin
                         data_rio     <= 16'o0;
-                        ask          <= 1'b1;
+                        ack          <= 1'b1;
                         rio          <= 1'b1;
                     end else
-                    if(wbm_adr_o[9:1] == 'o277) begin
+                    if(wbm_adr_o[12:1] == 'o7277) begin
                         data_rio     <= 16'o0;
-                        ask          <= 1'b1;
+                        ack          <= 1'b1;
                         rio          <= 1'b1;
                     end else
-                    if(wbm_adr_o[9:1] == 'o320) begin
+                    if(wbm_adr_o[12:1] == 'o7320) begin
                         data_rio     <= R176640;
                         rio          <= 1'b1;
-                        ask          <= 1'b1;
+                        ack          <= 1'b1;
                     end else
-                    if(wbm_adr_o[9:1] == 'o321) begin
+                    if(wbm_adr_o[12:1] == 'o7321) begin
                         addr_ram     <= R176640;
                         mask_rio     <= 4'b0000;
                         rio_ram_rd   <= 1'b1;
-                        ask          <= 1'b0;
+                        ack          <= 1'b0;
                     end else begin
                         ram_rd       <= 1'b0;
                         ram_wr       <= 1'b0;
@@ -267,7 +267,7 @@ always @(posedge vm_clk_p)
                         data_rio     <= 16'o0;
                         rio_ram_wr   <= 1'b0;
                         rio_ram_rd   <= 1'b0;
-                        ask          <= 1'b0;
+                        ack          <= 1'b0;
                     end
                 end
             end
