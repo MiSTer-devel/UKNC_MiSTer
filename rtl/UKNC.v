@@ -64,7 +64,7 @@ wire [15:0] data_cpu_i;
 wire [15:0] data_cpu_o;
 wire        read_cpu_o;
 wire        wrte_cpu_o;
-wire  [3:0] mask_cpu_o;
+wire  [1:0] mask_cpu_o;
 wire        ackn_cpu_i;
 
 wire [15:0] addr_ppu_o;

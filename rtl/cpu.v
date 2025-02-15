@@ -6,7 +6,7 @@ module cpu_wb(
     output reg [15:0] addr_ram,
     output [15:0] dout_ram,
     input  [15:0] dinp_ram,
-    output  [3:0] mask_ram,
+    output  [1:0] mask_ram,
     output        read_ram,
     output        wrte_ram,
     input         ackn_ram,
@@ -57,7 +57,6 @@ reg         ack;
 reg  [15:0] wbm_dat_loc;
 reg  [15:0] data_rio;
 reg  [15:0] ramd_rio;
-reg   [3:0] mask_rio;
 
 reg  [15:0] R176640;
 reg  [15:0] R176642;
@@ -85,7 +84,7 @@ always @(*)
 wire  wbm_ack_loc = (ack | ackn_ram | wbm_ack_i) & wbm_stb_o;
 
 assign dout_ram = rio_ram_wr ? ramd_rio : wbm_dat_o;
-assign mask_ram = rio_ram_wr ? {mask_rio[3:2],2'b11} : {~wbm_sel_o,2'b11};
+assign mask_ram = ~wbm_sel_o;
 assign read_ram = (ram_rd | rio_ram_rd) & wbm_stb_o;
 assign wrte_ram = (ram_wr | rio_ram_wr) & wbm_stb_o;
 //========================================================================================
@@ -142,7 +141,6 @@ always @(posedge vm_clk_p)
         wbm_stb_o_old <= 1'b0;
         rio_ram_wr <= 1'b0;
         rio_ram_rd <= 1'b0;
-        mask_rio <= 4'b0000;
         ramd_rio[15:0] <= 16'h0000;
     end else begin
         if(ackn_ram & rio_ram_rd) R176642 <= dinp_ram;
@@ -197,7 +195,6 @@ always @(posedge vm_clk_p)
                         R176642[15:8]   <= wbm_sel_o[1] ? wbm_dat_o[15:8] : R176642[15:8];
                         R176642[ 7:0]   <= wbm_sel_o[0] ? wbm_dat_o[ 7:0] : R176642[ 7:0];
                         addr_ram        <= R176640;
-                        mask_rio        <= 4'b0011;
                         rio_ram_wr      <= 1'b1;
                         ack             <= 1'b0;
                     end else begin
@@ -257,7 +254,6 @@ always @(posedge vm_clk_p)
                     end else
                     if(wbm_adr_o[12:1] == 'o7321) begin
                         addr_ram     <= R176640;
-                        mask_rio     <= 4'b0000;
                         rio_ram_rd   <= 1'b1;
                         ack          <= 1'b0;
                     end else begin
