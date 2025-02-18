@@ -2,7 +2,9 @@ module UKNC (
    input         clk_50,
    input         clk_25,
    input         cpuclk_p,
+   input         cpuclk_n,
    input         ppuclk_p,
+   input         ppuclk_n,
    input         locked,
 
    input         nbut,        // reset_n button
@@ -53,8 +55,6 @@ always @(posedge clk_25 or negedge n_all_rst)
        count_rst <= !n_all_rst ? 24'd0 : count_rst + !count_rst[23];
 //------------------------------------------------------------//
 wire init;
-wire cpuclk_n = ~cpuclk_p;
-wire ppuclk_n = ~ppuclk_p;
 
 //------------------------------------------------------------//
 // RAM cpu/ppu

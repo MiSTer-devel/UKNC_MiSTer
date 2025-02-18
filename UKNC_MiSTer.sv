@@ -335,22 +335,25 @@ video_mixer #(.LINE_LENGTH(832), .GAMMA(1)) video_mixer
 //* PLL Clocks
 //************************************************
 wire        clk_50;
-wire        clk_25;
-wire        clk_12_5;
-wire        clk_6_25;
 wire        sys_init;     // Reset
 wire        sys_plock;    // PLL Ready
 
 pll pll (
    .refclk   (CLK_50M),
-   .rst      (0),
-   .outclk_0 (clk_50),    // 50MHz
-   .outclk_1 (clk_25),    // 24MHz
-   .outclk_2 (clk_12_5),  // 12,5MHz
-   .outclk_3 (clk_6_25),  // 6,25MHz
-//   .outclk_4 (SDRAM_CLK), // 50MHz 90 shift
-   .locked   (sys_plock)    // флаг готовности PLL
+	.outclk_0 (clk_50)
 );
+
+reg ce_25, ce_12_5, ce_12_5n, ce_6_25, ce_6_25n;
+always @(negedge clk_50) begin
+	reg [2:0] div;
+
+	div <= div + 1'd1;
+	ce_25    <= !div[0];
+	ce_12_5  <= !div[1:0];
+	ce_12_5n <= div[1] && !div[0];
+	ce_6_25  <= !div[2:0];
+	ce_6_25n <= div[2] && !div[1:0];
+end
 
 ///////////
 wire  [2:0] vgarn;
@@ -365,9 +368,11 @@ assign AUDIO_L = AUDIO_R;
 
 UKNC UKNC (
     .clk_50   (clk_50),
-    .clk_25   (clk_25),
-    .cpuclk_p (clk_12_5),
-    .ppuclk_p (clk_6_25),
+    .clk_25   (ce_25    & clk_50),
+    .cpuclk_p (ce_12_5  & clk_50),
+    .cpuclk_n (ce_12_5n & clk_50),
+    .ppuclk_p (ce_6_25  & clk_50),
+    .ppuclk_n (ce_6_25n & clk_50),
     .locked   (sys_plock),
     .red      (vgarn),
     .green    (vgagn),
@@ -415,12 +420,12 @@ UKNC UKNC (
    .SDRAM_CKE     (SDRAM_CKE) 
 );
 
-assign CLK_VIDEO = clk_25;
+assign CLK_VIDEO = clk_50;
 
 //reg  clk16;
 //always @ (posedge clk32p) clk16 <= ~clk16;
 
-assign CE_PIXEL  = 1'b1;  // (forced_scandoubler ? 1'b1 : clk16);
+assign CE_PIXEL  = ce_25;  // (forced_scandoubler ? 1'b1 : clk16);
 
 //assign VGA_DE = ~(hblank | vblank);
 assign VGA_R[7:5] = vgarn ;
