@@ -444,7 +444,7 @@ ram ram
 
    .hsync      (VGA_HS),
    .vsync      (VGA_VS),
-   .visible    (VGA_DE),
+   .de         (VGA_DE),
    .red        (vgarn),
    .green      (vgagn),
    .blue       (vgabn),
@@ -476,9 +476,9 @@ assign CLK_VIDEO = clk_50;
 assign CE_PIXEL  = ce_25;  // (forced_scandoubler ? 1'b1 : clk16);
 
 //assign VGA_DE = ~(hblank | vblank);
-assign VGA_R[7:5] = vgarn ;
-assign VGA_G[7:5] = vgagn ;
-assign VGA_B[7:5] = vgabn ;
+assign VGA_R = {vgarn,vgarn,vgarn[2:1]};
+assign VGA_G = {vgagn,vgagn,vgagn[2:1]};
+assign VGA_B = {vgabn,vgabn,vgabn[2:1]};
 
 //-----------------------
 wire        reset_key;      // кнопка сброса

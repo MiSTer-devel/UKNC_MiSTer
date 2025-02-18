@@ -4,12 +4,12 @@ module ram
    input             clk_50,      // sdram is accessed at up to 128MHz
 	input             reset,
    
-   output            hsync,
-   output            vsync,
-   output            visible,
-   output     [ 2:0] red,
-   output     [ 2:0] green,
-   output     [ 2:0] blue,
+   output reg        hsync,
+   output reg        vsync,
+   output reg        de,
+   output reg [ 2:0] red,
+   output reg [ 2:0] green,
+   output reg [ 2:0] blue,
    
    input      [15:0] cpu_addr,   // 19 bit address 
    output reg [15:0] cpu_dout,   // data output to cpu
@@ -35,14 +35,11 @@ reg [15:0] vga_adnx = 16'o270;  // address next string
 reg        qutro_reg;
 reg        types_reg;
 reg        vga_curs;
-reg        ppu_ll;
-reg        ppu_hl;
+reg        ppu_vl;
 reg        cpu_vl;
 reg        curs_set;
 reg [31:0] vga_regi;        // vga register isobr
 reg [31:0] vga_regc;        // vga register color
-
-always @(posedge curs_set or posedge new_scr)vga_curs <= new_scr ? 1'b0 : ~vga_curs;
 
 wire [ 9:0] x            = horz[10:1] /* synthesis keep */;
 wire        new_scr      = x[9:3]  == 0 && vert==0 /* synthesis keep */;
@@ -55,24 +52,13 @@ wire        get_regs_new = vert[0] == 1'b0/* synthesis keep */;
 // ---------------------------------------------------------------------
 // --------------------- vga control signals ---------------------------
 // ---------------------------------------------------------------------
-`define HSYNC 64
-`define HBP   80
-`define HACTV 640
-`define HFP   16
-`define HSTR  800
 
-`define VSYNC 3
-`define VBP   14
-`define VACTV 600
-`define VFP   1
-`define VSTR  618
-
-wire   startd    = x > 143;
-wire   visible_x = x > 16 + 64 + 80;
-wire   visible_y = vert < 600;
-assign hsync     = x > 15 && x < 16 + 64;
-assign vsync     = vert > 600 + 13 && vert < 600 + 14 + 3;
-assign visible   = visible_x && visible_y;
+wire startd    = x > 143;
+wire visible_x = x > 16 + 64 + 80;
+wire visible_y = vert < 600;
+wire hs        = x > 15 && x < 16 + 64;
+wire vs        = vert > 600 + 13 && vert < 600 + 14 + 3;
+wire visible   = visible_x && visible_y;
 
 wire [ 9:0] xs = startd ?
                  vga_regi[21:20] == 2'b00 ? x - 10'd144 :
@@ -111,21 +97,21 @@ reg  [ 7:0] red_data;
 
 reg  [ 2:0] tripl;
 reg         iscursor;
+reg         curs_set_d;
 
 always @(posedge clk_50) begin
 
-   ppu_ll <= 1'b0;
-   ppu_hl <= 1'b0;
-   cpu_vl <= 1'b0;
-//----------------------------------------------------------------------
-// 
-//----------------------------------------------------------------------
+   curs_set_d <= curs_set;
+	if(~curs_set_d & curs_set) vga_curs <= ~vga_curs;
+
    if(new_scr)begin
       vga_adnx  <= 16'o270;
       types_reg <= 0;
       qutro_reg <= 0;
       curs_set  <= 0;
+		curs_set_d<= 0;
       indx_reg  <= 0;
+		vga_curs  <= 0;
    end 
 // ---------------------------------------------------------------------
 // --------------------------- steps/video ---------------------------
@@ -194,6 +180,8 @@ always @(posedge clk_50) begin
          end
    endcase
 
+   ppu_vl <= 0;
+   cpu_vl <= 0;
 	bramppu_we <= 0;
 	bramcpu_we <= 0;
 
@@ -257,7 +245,7 @@ always @(posedge clk_50) begin
 				//ppu memory
             if(ppu_wrte_new)begin
 					bramppu_we <= ~ppu_dqm_new[1:0];
-               ppu_ll     <= 1'b1;
+               ppu_vl     <= 1'b1;
             end
 
 				//cpu memory
@@ -269,7 +257,7 @@ always @(posedge clk_50) begin
             end else begin
                if(ppu_wrte_new) begin 
 						bramcpu_we <= ~ppu_dqm_new[3:2];
-                  ppu_hl <= 1'b1;
+                  ppu_vl <= 1'b1;
                end
             end
           end
@@ -278,7 +266,7 @@ always @(posedge clk_50) begin
 				//ppu memory
             if(ppu_read_new)begin 
                ppu_dout[15:0] <= bramppu_data;
-               ppu_ll         <= 1'b1;
+               ppu_vl         <= 1'b1;
             end
 
 				//cpu memory
@@ -290,7 +278,7 @@ always @(posedge clk_50) begin
             end else begin
 				   if(ppu_read_new) begin
                   ppu_dout[31:16] <= bramcpu_data;
-                  ppu_hl <= 1'b1;
+                  ppu_vl <= 1'b1;
 					end
             end
           end
@@ -309,11 +297,11 @@ end
 always @(posedge clk_50) begin
       if(~reset)begin
 //-------------------------------------------------------------------
-           if(!(ppu_read|ppu_wrte))ppu_ack <= 1'b0;
-           if(ppu_hl||ppu_ll)ppu_ack <= 1'b1;
+		  if(!(ppu_read|ppu_wrte)) ppu_ack <= 1'b0;
+		  if(ppu_vl)               ppu_ack <= 1'b1;
 //-------------------------------------------------------------------
-           if(!(cpu_read|cpu_wrte))cpu_ack <= 1'b0;
-           if(cpu_vl)cpu_ack <= 1'b1;
+		  if(!(cpu_read|cpu_wrte)) cpu_ack <= 1'b0;
+		  if(cpu_vl)               cpu_ack <= 1'b1;
 //-------------------------------------------------------------------
       end else begin
          ppu_ack <= 1'b0;
@@ -328,45 +316,29 @@ always @(posedge clk_50) begin
 //  _____|^^^^^|_______|^^^^^^^^^^^^^^^^^^^^^^^^^^^^|______
 //   FP   HSYNC   BP         ACTIVE                    FP
 //---------------------------------------------------------------------------------------------------------//
-`define HSYNC 64
-`define HBP   80
-`define HACTV 640
-`define HFP   16
-`define HSTR  800
-
-`define VSYNC 3
-`define VBP   14
-`define VACTV 600
-`define VFP   1
-`define VSTR  618
-
-`define HVS   `HFP + `HSYNC + `HBP
-`define VVS   `VFP + `VSYNC + `VBP
 
 // ---------------------------------------------------------------------
 // display out logic
 // ---------------------------------------------------------------------
-reg  [ 3:0]cvt;
-
-always @(*)
-    case(tripl)
-    3'b000: cvt <= vga_regc[ 3: 0];
-    3'b001: cvt <= vga_regc[ 7: 4];
-    3'b010: cvt <= vga_regc[11: 8];
-    3'b011: cvt <= vga_regc[15:12];
-    3'b100: cvt <= vga_regc[19:16];
-    3'b101: cvt <= vga_regc[23:20];
-    3'b110: cvt <= vga_regc[27:24];
-    3'b111: cvt <= vga_regc[31:28];
-    endcase
-
 wire [ 2:0]curR = vga_regi[2] ? vga_regi[3] ? 3'b111: 3'b100 : 3'd0;
 wire [ 2:0]curG = vga_regi[1] ? vga_regi[3] ? 3'b111: 3'b100 : 3'd0;
 wire [ 2:0]curB = vga_regi[0] ? vga_regi[3] ? 3'b111: 3'b100 : 3'd0;
 
-assign red   = (cvt[2] & visible ? vga_regi[18] ? 3'b111: cvt[3] ? 3'b110 : 3'b100 : 3'd0) | (visible & iscursor ? curR : 3'd0);
-assign green = (cvt[1] & visible ? vga_regi[17] ? 3'b111: cvt[3] ? 3'b110 : 3'b100 : 3'd0) | (visible & iscursor ? curG : 3'd0);
-assign blue  = (cvt[0] & visible ? vga_regi[16] ? 3'b111: cvt[3] ? 3'b110 : 3'b100 : 3'd0) | (visible & iscursor ? curB : 3'd0);
+wire [3:0] cvt = vga_regc[tripl*4 +:4];
+
+wire [2:0] r = (cvt[2] & visible ? vga_regi[18] ? 3'b111: cvt[3] ? 3'b110 : 3'b100 : 3'd0) | (visible & iscursor ? curR : 3'd0);
+wire [2:0] g = (cvt[1] & visible ? vga_regi[17] ? 3'b111: cvt[3] ? 3'b110 : 3'b100 : 3'd0) | (visible & iscursor ? curG : 3'd0);
+wire [2:0] b = (cvt[0] & visible ? vga_regi[16] ? 3'b111: cvt[3] ? 3'b110 : 3'b100 : 3'd0) | (visible & iscursor ? curB : 3'd0);
+
+always @(posedge clk_50) begin
+	red   <= r;
+	green <= g;
+	blue  <= b;
+	hsync <= hs;
+	vsync <= vs;
+	de    <= visible;
+end
+
 //---------------------------------------------------------------------------------------------------------//
 
 wire [15:0] bramppu_data, bramcpu_data;
