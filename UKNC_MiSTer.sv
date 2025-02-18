@@ -335,12 +335,10 @@ video_mixer #(.LINE_LENGTH(832), .GAMMA(1)) video_mixer
 //* PLL Clocks
 //************************************************
 wire        clk_50;
-wire        sys_init;     // Reset
-wire        sys_plock;    // PLL Ready
-
 pll pll (
    .refclk   (CLK_50M),
-	.outclk_0 (clk_50)
+   .rst      (0),
+   .outclk_0 (clk_50)    // 50MHz
 );
 
 reg ce_25, ce_12_5, ce_12_5n, ce_6_25, ce_6_25n;
@@ -373,7 +371,6 @@ UKNC UKNC (
     .cpuclk_n (ce_12_5n & clk_50),
     .ppuclk_p (ce_6_25  & clk_50),
     .ppuclk_n (ce_6_25n & clk_50),
-    .locked   (sys_plock),
     .red      (vgarn),
     .green    (vgagn),
     .blue     (vgabn),
