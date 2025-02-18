@@ -170,6 +170,7 @@ assign USER_OUT = '1;
 assign UART_RTS = UART_CTS;
 assign UART_DTR = UART_DSR;
 assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
+assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
 assign {DDRAM_CLK, DDRAM_BURSTCNT, DDRAM_ADDR, DDRAM_DIN, DDRAM_BE, DDRAM_RD, DDRAM_WE} = '0;  
 
 assign VGA_SCALER  = 0;
@@ -371,12 +372,7 @@ UKNC UKNC (
     .cpuclk_n (ce_12_5n & clk_50),
     .ppuclk_p (ce_6_25  & clk_50),
     .ppuclk_n (ce_6_25n & clk_50),
-    .red      (vgarn),
-    .green    (vgagn),
-    .blue     (vgabn),
-    .vsync    (VGA_VS),
-    .hsync    (VGA_HS),
-    .visible  (VGA_DE),
+
     .ps2_key  (ps2_key),
     .nbut     (~reset_key),
     .uart_rx  (UART_RXD),
@@ -404,18 +400,73 @@ UKNC UKNC (
    .ide_read      (ide_read),
    .ide_write     (ide_write),
 */
-   .SDRAM_A       (SDRAM_A),        // SDRAM Address bus 12 Bits
-   .SDRAM_DQ      (SDRAM_DQ),       // SDRAM Data bus 16 Bits
-   .SDRAM_DQML    (SDRAM_DQML),     // SDRAM Low-byte Data Mask 
-   .SDRAM_DQMH    (SDRAM_DQMH),     // SDRAM High-byte Data Mask
-   .SDRAM_nWE     (SDRAM_nWE),      // SDRAM Write Enable
-   .SDRAM_nCAS    (SDRAM_nCAS),     // SDRAM Column Address Strobe
-   .SDRAM_nRAS    (SDRAM_nRAS),     // SDRAM Row Address Strobe
-   .SDRAM_nCS     (SDRAM_nCS),      // SDRAM Chip Select
-   .SDRAM_BA      (SDRAM_BA),       // SDRAM Bank Address 0,1
-   .SDRAM_CLK     (SDRAM_CLK),      // SDRAM Clock
-   .SDRAM_CKE     (SDRAM_CKE) 
+
+	.vsync(VGA_VS),
+
+   .addr_cpu_o(addr_cpu_o),
+   .data_cpu_i(data_cpu_i),
+   .data_cpu_o(data_cpu_o),
+   .mask_cpu_o(mask_cpu_o),
+   .read_cpu_o(read_cpu_o),
+   .wrte_cpu_o(wrte_cpu_o),
+   .ackn_cpu_i(ackn_cpu_i),
+
+   .addr_ppu_o(addr_ppu_o),
+   .data_ppu_i(data_ppu_i),
+   .data_ppu_o(data_ppu_o),
+   .mask_ppu_o(mask_ppu_o),
+   .read_ppu_o(read_ppu_o),
+   .wrte_ppu_o(wrte_ppu_o),
+   .ackn_ppu_i(ackn_ppu_i)
 );
+
+
+wire [15:0] addr_cpu_o;
+wire [15:0] data_cpu_o;
+wire        read_cpu_o;
+wire        wrte_cpu_o;
+wire  [1:0] mask_cpu_o;
+wire [15:0] data_cpu_i;
+wire        ackn_cpu_i;
+
+wire [15:0] addr_ppu_o;
+wire [31:0] data_ppu_o;
+wire        read_ppu_o;
+wire        wrte_ppu_o;
+wire  [3:0] mask_ppu_o;
+wire [31:0] data_ppu_i;
+wire        ackn_ppu_i;
+
+ram ram
+(
+   .clk_50     (clk_50),
+	.reset      (reset_key),
+
+   .hsync      (VGA_HS),
+   .vsync      (VGA_VS),
+   .visible    (VGA_DE),
+   .red        (vgarn),
+   .green      (vgagn),
+   .blue       (vgabn),
+
+   .cpu_addr   (addr_cpu_o),
+   .cpu_dout   (data_cpu_i),
+   .cpu_din    (data_cpu_o),
+   .cpu_dqm    (mask_cpu_o),
+   .cpu_read   (read_cpu_o),
+   .cpu_wrte   (wrte_cpu_o),
+   .cpu_ack    (ackn_cpu_i),
+
+   .ppu_addr   (addr_ppu_o),
+   .ppu_dout   (data_ppu_i),
+   .ppu_din    (data_ppu_o),
+   .ppu_dqm    (mask_ppu_o),
+   .ppu_read   (read_ppu_o),
+   .ppu_wrte   (wrte_ppu_o),
+   .ppu_ack    (ackn_ppu_i)
+);
+
+
 
 assign CLK_VIDEO = clk_50;
 

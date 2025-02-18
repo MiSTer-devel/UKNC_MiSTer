@@ -5,34 +5,32 @@ module UKNC (
    input         cpuclk_n,
    input         ppuclk_p,
    input         ppuclk_n,
-   input         locked,
 
    input         nbut,        // reset_n button
    output        sound,
+	
+	input         vsync,
 
-   inout  [15:0] SDRAM_DQ,    // 16 bit bidirectional data bus
-   output [12:0] SDRAM_A,     // 11 bit multiplexed address bus
-   output        SDRAM_DQML,  // two byte masks
-   output        SDRAM_DQMH,  // 
-   output  [1:0] SDRAM_BA,    // four banks
-   output        SDRAM_nCS,   // a single chip select
-   output        SDRAM_nWE,   // write enable
-   output        SDRAM_nRAS,  // row address select
-   output        SDRAM_nCAS,  // columns address select
-   output        SDRAM_CKE,   // clock enable
-   output        SDRAM_CLK,
+	output [15:0] addr_cpu_o,
+	output [15:0] data_cpu_o,
+	output        read_cpu_o,
+	output        wrte_cpu_o,
+	output  [1:0] mask_cpu_o,
+	input  [15:0] data_cpu_i,
+	input         ackn_cpu_i,
+
+	output [15:0] addr_ppu_o,
+	output [31:0] data_ppu_o,
+	output        read_ppu_o,
+	output        wrte_ppu_o,
+	output  [3:0] mask_ppu_o,
+	input  [31:0] data_ppu_i,
+	input         ackn_ppu_i,
 
    input  [10:0] ps2_key,
 
    output        uart_tx,
    input         uart_rx,
-
-   output  [2:0] red,
-   output  [2:0] green,
-   output  [2:0] blue,
-   output        vsync,
-   output        hsync,
-   output        visible,
 
    output [10:0] sd_lba,
    output        sd_rd,
@@ -45,76 +43,13 @@ module UKNC (
 );
 
 //------------------------------------------------------------//
-assign SDRAM_CKE = 1'b1;
-//------------------------------------------------------------//
 reg  [23:0]count_rst = 0;
-wire n_all_rst = init & nbut;
+wire n_all_rst = nbut;
 wire sys_rst = count_rst[23];
 
 always @(posedge clk_25 or negedge n_all_rst)
        count_rst <= !n_all_rst ? 24'd0 : count_rst + !count_rst[23];
-//------------------------------------------------------------//
-wire init;
 
-//------------------------------------------------------------//
-// RAM cpu/ppu
-//------------------------------------------------------------//
-wire [15:0] addr_cpu_o;
-wire [15:0] data_cpu_i;
-wire [15:0] data_cpu_o;
-wire        read_cpu_o;
-wire        wrte_cpu_o;
-wire  [1:0] mask_cpu_o;
-wire        ackn_cpu_i;
-
-wire [15:0] addr_ppu_o;
-wire [31:0] data_ppu_i;
-wire [31:0] data_ppu_o;
-wire        read_ppu_o;
-wire        wrte_ppu_o;
-wire  [3:0] mask_ppu_o;
-wire        ackn_ppu_i;
-//------------------------------------------------------------//
-sdram sdram(
-   // interface to the MT48LC16M16 chip
-   .SDRAM_A    (SDRAM_A),
-   .SDRAM_DQ   (SDRAM_DQ),
-   .SDRAM_BA   (SDRAM_BA),
-   .SDRAM_nCS  (SDRAM_nCS),
-   .SDRAM_nWE  (SDRAM_nWE),
-   .SDRAM_nRAS (SDRAM_nRAS),
-   .SDRAM_nCAS (SDRAM_nCAS),
-   .SDRAM_DQML (SDRAM_DQML),
-   .SDRAM_DQMH (SDRAM_DQMH),
-   .SDRAM_CLK  (SDRAM_CLK),
-   // cpu/chipset interface
-   .clk_50     (clk_50),      // sdram is accessed at up to 128MHz
-   .lockclk    (locked),
-   .init       (init),
-
-   .hsync      (hsync),
-   .vsync      (vsync),
-   .visible    (visible),
-   .red        (red),
-   .green      (green),
-   .blue       (blue),
-
-   .cpu_addr   (addr_cpu_o),
-   .cpu_dout   (data_cpu_i),
-   .cpu_din    (data_cpu_o),
-   .cpu_dqm    (mask_cpu_o),
-   .cpu_read   (read_cpu_o),
-   .cpu_wrte   (wrte_cpu_o),
-   .cpu_ack    (ackn_cpu_i),
-
-   .ppu_addr   (addr_ppu_o),
-   .ppu_dout   (data_ppu_i),
-   .ppu_din    (data_ppu_o),
-   .ppu_dqm    (mask_ppu_o),
-   .ppu_read   (read_ppu_o),
-   .ppu_wrte   (wrte_ppu_o),
-   .ppu_ack    (ackn_ppu_i)
-);
 //------------------------------------------------------------//
 //  Wishbone PPU
 //------------------------------------------------------------//
@@ -253,9 +188,7 @@ ppu_wb ppu1(
    .pin_tmr_ena_o   (pin_tmr_ena_o)
 );
 //------------------------------------------------------------//
-wire        button;
 wire  [7:0] keycode;
-wire        read_kbd;
 
 xm2_01 dd1(
    .pin_vm_clk25    (clk_25),
@@ -284,21 +217,16 @@ xm2_01 dd1(
 
    .pin_wbi_stb_o   (ppu_wbi_stb_o_xm2),
 
-//   .button          (button),
    .but_data        (keycode),
-//   .read_kbd        (read_kbd),
 
    .sound           (sound)
 );
 
-//------------------------------------------------------------//
 keybrd kbrd(
    .clk         (clk_50),
    .rst         (~sys_rst),
 
-   .press_btn   (button),
    .keycode     (keycode),
-   .read        (read_kbd),
    .ps2_key     (ps2_key)
 );
 

@@ -1,20 +1,8 @@
-module sdram(
-   // interface to the MT48LC16M16 chip
-   output reg [12:0] SDRAM_A,       // 13 bit multiplexed address bus
-   inout  reg [15:0] SDRAM_DQ,
-   output reg [ 1:0] SDRAM_BA,      // two banks
-   output            SDRAM_nCS,     // a single chip select
-   output            SDRAM_nWE,     // write enable
-   output            SDRAM_nRAS,    // row address select
-   output            SDRAM_nCAS,    // columns address select
-   output            SDRAM_DQML,
-   output            SDRAM_DQMH,
-   output            SDRAM_CLK,
-
+module ram
+(
    // cpu/chipset interface
    input             clk_50,      // sdram is accessed at up to 128MHz
-   input             lockclk,
-   output            init,     // init signal after FPGA config to initialize RAM
+	input             reset,
    
    output            hsync,
    output            vsync,
@@ -39,8 +27,6 @@ module sdram(
    input             ppu_wrte,   // ppu requests write
    output reg        ppu_ack    // dout is valid. Ready to accept new read/write.
 );
-
-assign init = 1'b1;
 
 reg [10:0] horz;
 reg [ 9:0] vert;
@@ -321,7 +307,7 @@ end
 //-------------PPU/CPU busy/asck signals-----------------------------
 //-------------------------------------------------------------------
 always @(posedge clk_50) begin
-      if(init)begin
+      if(~reset)begin
 //-------------------------------------------------------------------
            if(!(ppu_read|ppu_wrte))ppu_ack <= 1'b0;
            if(ppu_hl||ppu_ll)ppu_ack <= 1'b1;

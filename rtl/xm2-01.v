@@ -24,16 +24,13 @@ module xm2_01(
 
    output        pin_wbi_stb_o,
 
-   //input         button,
    input  [ 7:0] but_data,
-   //output        read_kbd,
 
    output        sound
 );
 //========================================================================================
 wire       ce;
 reg        ce_old        = 1'b0;
-reg        read_kbd      = 1'b0;
 reg        press_btn     = 1'b0;
 reg        wbi_stb_i_old = 0;
 reg        ask           = 1'b0;
@@ -84,14 +81,6 @@ assign timer_clk     = R177710[2:1]==2'b00 ? count_clk[0] :
                        R177710[2:1]==2'b01 ? count_clk[1] :
                        R177710[2:1]==2'b10 ? count_clk[2] : count_clk[3];
 //========================================================================================
-/*always @(posedge pin_vm_clk_p)
-    if(R177702!=but_data && |but_data)begin press_btn <= 1'b1; R177702 <= but_data; end
-    else if(read_kbd) begin press_btn <= 1'b0; end */
-
-always @(posedge pin_vm_clk_p or posedge read_kbd)
-    if(read_kbd) begin press_btn <= 1'b0; end
-    else if(R177702!=but_data && |but_data)begin press_btn <= 1'b1; R177702 <= but_data; end
-//========================================================================================
 reg [11:0]sount_count = 0;
 reg [ 6:0]sound_div = 0;
 always @(posedge pin_vm_clk25)
@@ -112,7 +101,7 @@ assign clk60Hz  = !sound_div;    // 8000/128 = 60   Hz
 assign sound         = R177716[7] & (clk8kHz & R177716[12]) & (clk1kHz & R177716[11]) &
                       (clk500Hz & R177716[10]) & (clk250Hz & R177716[9]) & (clk60Hz & R177716[8]) || ~(|R177716[12:8]) & R177716[7];
 //========================================================================================
-always @(posedge pin_vm_clk_p)
+always @(posedge pin_vm_clk_p) begin
     if(pin_vm_init_i) begin
         R177716 <= 16'o40;
         {R177710[6:5],R177710[0]} <= 3'b00;
@@ -124,6 +113,7 @@ always @(posedge pin_vm_clk_p)
         //count_clk     <= 0;
         zero_tmr_old  <= 1'b0;
         //timer_clk_old <= 1'b0;
+        press_btn     <= 1'b0;
     end else begin
         ce_old <= ce;
         zero_tmr_old <= zero_tmr;
@@ -131,7 +121,6 @@ always @(posedge pin_vm_clk_p)
         R177714 <= R177710[7] ? R177714 : count_tmr;
         if(!pin_wbm_stb_i) begin
             wbm_dat_o    <= 16'o0;
-            read_kbd     <= 1'b0;
             ask          <= 1'b0;
         end else
         if(~ce_old & ce) begin
@@ -145,9 +134,9 @@ always @(posedge pin_vm_clk_p)
                        end
             'b0_00001: begin
                             ask          <= 1'b1;
-                            wbm_dat_o    <= {8'd0,but_data};
+                            wbm_dat_o    <= {8'd0,R177702};
                             enVIRQbt     <= 1'b1;
-                            read_kbd     <= 1'b1;
+                            press_btn    <= 1'b0;
                        end
             'b0_00010: begin
                             ask          <= 1'b1;
@@ -218,7 +207,14 @@ always @(posedge pin_vm_clk_p)
             if(setVIRQtm && enVIRQtm)begin pin_wbi_dat_o <= 16'o304; enVIRQtm <= 1'b0; pin_wbi_ack_o <= 1'b1; end
             else if(setVIRQbt && enVIRQbt)begin pin_wbi_dat_o <= 16'o300; enVIRQbt <= 1'b0; pin_wbi_ack_o <= 1'b1; end
         end
+		  
+        if(R177702!=but_data && |but_data) begin
+           press_btn <= 1'b1;
+           R177702 <= but_data;
+        end
     end
+end
+
 //========================================================================================
 always @(posedge pin_vm_clk25)
    if(count_2mks == 24)begin
