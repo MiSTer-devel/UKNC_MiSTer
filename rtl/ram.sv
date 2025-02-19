@@ -1,7 +1,6 @@
 module ram
 (
-   // cpu/chipset interface
-   input             clk_50,      // sdram is accessed at up to 128MHz
+   input             clk,
    input             reset,
 
    output reg        hsync,
@@ -11,26 +10,26 @@ module ram
    output reg [ 2:0] green,
    output reg [ 2:0] blue,
 
-   input      [15:0] cpu_addr,   // 19 bit address 
+   input      [15:0] cpu_addr,   // address 
    output reg [15:0] cpu_dout,   // data output to cpu
    input      [15:0] cpu_din,    // data input from cpu
    input      [ 1:0] cpu_dqm,    // dqm write only
    input             cpu_read,   // cpu requests read
    input             cpu_wrte,   // cpu requests write
-   output reg        cpu_ack,   // dout is valid. Ready to accept new read/write.
+   output reg        cpu_ack,    // dout is valid. Ready to accept new read/write.
 
-   input      [15:0] ppu_addr,   // 19 bit address 
+   input      [15:0] ppu_addr,   // address 
    output reg [31:0] ppu_dout,   // data output to cpu
    input      [31:0] ppu_din,    // data input from cpu
    input      [ 3:0] ppu_dqm,    // dqm write only
    input             ppu_read,   // ppu requests read
    input             ppu_wrte,   // ppu requests write
-   output reg        ppu_ack    // dout is valid. Ready to accept new read/write.
+   output reg        ppu_ack     // dout is valid. Ready to accept new read/write.
 );
 
 reg [10:0] horz;
 reg [ 9:0] vert;
-reg [15:0] vga_adst;        // address string in memory
+reg [15:0] vga_adst;            // address string in memory
 reg [15:0] vga_adnx = 16'o270;  // address next string
 reg        qutro_reg;
 reg        types_reg;
@@ -48,18 +47,16 @@ wire        get_regs1    = x[9:3]  == 4;
 wire        get_regs2    = x[9:3]  == 5;
 wire        get_regs3    = x[9:3]  == 6;
 wire        get_regs     = get_regs0|get_regs1|get_regs2|get_regs3/* synthesis keep */;
-wire        get_regs_new = vert[0] == 1'b0/* synthesis keep */;
 // ---------------------------------------------------------------------
 // --------------------- vga control signals ---------------------------
 // ---------------------------------------------------------------------
 
 wire startd    = x > 143;
-wire visible_x = x > 16 + 64 + 80 - 1;
+wire visible_x = x > 159;
 //wire visible_y = vert < 600;
-wire visible_y = vert > 39 && vert < 616;
+wire visible_y = vert > 19 && vert < 308;
 wire hs        = x > 15 && x < 16 + 64;
-//wire vs        = vert > 600 + 13 && vert < 600 + 14 + 3;
-wire vs        = vert > 600 + 20 && vert < 600 + 20 + 3;
+wire vs        = vert > 309;
 wire visible   = visible_x && visible_y;
 
 wire [ 9:0] xs = startd ?
@@ -101,7 +98,7 @@ reg  [ 2:0] tripl;
 reg         iscursor;
 reg         curs_set_d;
 
-always @(posedge clk_50) begin
+always @(posedge clk) begin
 
    curs_set_d <= curs_set;
    if(~curs_set_d & curs_set) vga_curs <= ~vga_curs;
@@ -118,8 +115,8 @@ always @(posedge clk_50) begin
 // ---------------------------------------------------------------------
 // --------------------------- steps/video ---------------------------
 // ---------------------------------------------------------------------
-   if(horz==1599)begin
-      if(vert == 623)vert <= 10'd0;
+   if(horz == 1599)begin
+      if(vert == 311)vert <= 10'd0;
       else vert <= vert + 1'b1;
       horz <= 11'd0;
    end else horz <= horz + 1'b1;
@@ -190,30 +187,28 @@ always @(posedge clk_50) begin
    case (q)
    4'd2 : begin
             if(get_regs)begin
-               if(get_regs_new)begin
-                  indx_reg <= indx_reg + 2'b10;
-                  case({qutro_reg,get_regs3,get_regs2,get_regs1})
-                  'b1_000: if(types_reg) vga_regc[15: 0] <= bramppu_data;
-                           else          vga_regi[15: 0] <= bramppu_data;
-                  'b1_001: if(types_reg) vga_regc[31:16] <= bramppu_data;
-                           else          vga_regi[31:16] <= bramppu_data;
-                  'b1_010: vga_adst     <= bramppu_data;
-                  'b1_100: begin
-                              vga_adnx  <= bramppu_data;
-                              curs_set  <= bramppu_data[0];
-                              qutro_reg <= bramppu_data[1];
-                              types_reg <= bramppu_data[2];
-                           end
+					indx_reg <= indx_reg + 2'b10;
+					case({qutro_reg,get_regs3,get_regs2,get_regs1})
+					'b1_000: if(types_reg) vga_regc[15: 0] <= bramppu_data;
+								else          vga_regi[15: 0] <= bramppu_data;
+					'b1_001: if(types_reg) vga_regc[31:16] <= bramppu_data;
+								else          vga_regi[31:16] <= bramppu_data;
+					'b1_010: vga_adst     <= bramppu_data;
+					'b1_100: begin
+									vga_adnx  <= bramppu_data;
+									curs_set  <= bramppu_data[0];
+									qutro_reg <= bramppu_data[1];
+									types_reg <= bramppu_data[2];
+								end
 
-                  'b0_000: vga_adst     <= bramppu_data[15:0];
-                  'b0_001: vga_adnx     <= bramppu_data[15:0];
-                  'b0_100: begin
-                              curs_set  <= vga_adnx[0];
-                              qutro_reg <= vga_adnx[1];
-                              types_reg <= vga_adnx[2];
-                           end
-                  endcase
-               end
+					'b0_000: vga_adst     <= bramppu_data[15:0];
+					'b0_001: vga_adnx     <= bramppu_data[15:0];
+					'b0_100: begin
+									curs_set  <= vga_adnx[0];
+									qutro_reg <= vga_adnx[1];
+									types_reg <= vga_adnx[2];
+								end
+					endcase
             end else begin
                pr_blue_data <= addr_scr[0] ? bramppu_data[15:8]: bramppu_data[7:0];
             end
@@ -296,7 +291,7 @@ end
 //-------------------------------------------------------------------
 //-------------PPU/CPU busy/asck signals-----------------------------
 //-------------------------------------------------------------------
-always @(posedge clk_50) begin
+always @(posedge clk) begin
       if(~reset)begin
 //-------------------------------------------------------------------
         if(!(ppu_read|ppu_wrte)) ppu_ack <= 1'b0;
@@ -328,11 +323,11 @@ wire [ 2:0]curB = vga_regi[0] ? vga_regi[3] ? 3'b111: 3'b100 : 3'd0;
 
 wire [3:0] cvt = vga_regc[tripl*4 +:4];
 
-wire [2:0] r = (cvt[2] & visible ? vga_regi[18] ? 3'b111: cvt[3] ? 3'b110 : 3'b100 : 3'd0) | (visible & iscursor ? curR : 3'd0);
-wire [2:0] g = (cvt[1] & visible ? vga_regi[17] ? 3'b111: cvt[3] ? 3'b110 : 3'b100 : 3'd0) | (visible & iscursor ? curG : 3'd0);
-wire [2:0] b = (cvt[0] & visible ? vga_regi[16] ? 3'b111: cvt[3] ? 3'b110 : 3'b100 : 3'd0) | (visible & iscursor ? curB : 3'd0);
+wire [2:0] r = (cvt[2] ? vga_regi[18] ? 3'b111: cvt[3] ? 3'b110 : 3'b100 : 3'd0) | (iscursor ? curR : 3'd0);
+wire [2:0] g = (cvt[1] ? vga_regi[17] ? 3'b111: cvt[3] ? 3'b110 : 3'b100 : 3'd0) | (iscursor ? curG : 3'd0);
+wire [2:0] b = (cvt[0] ? vga_regi[16] ? 3'b111: cvt[3] ? 3'b110 : 3'b100 : 3'd0) | (iscursor ? curB : 3'd0);
 
-always @(posedge clk_50) begin
+always @(posedge clk) begin
    red   <= r;
    green <= g;
    blue  <= b;
@@ -348,7 +343,7 @@ reg   [1:0] bramppu_we, bramcpu_we;
 
 spram #(15) bramppu_l
 (
-   .clock(clk_50),
+   .clock(clk),
    .address(q[3] ? ppu_addr_new[15:1] : get_regs ? addr_reg[15:1] : addr_scr[15:1]),
    .data(ppu_din_new[7:0]),
    .wren(bramppu_we[0]),
@@ -357,7 +352,7 @@ spram #(15) bramppu_l
 
 spram #(15) bramppu_u
 (
-   .clock(clk_50),
+   .clock(clk),
    .address(q[3] ? ppu_addr_new[15:1] : get_regs ? addr_reg[15:1] : addr_scr[15:1]),
    .data(ppu_din_new[15:8]),
    .wren(bramppu_we[1]),
@@ -366,7 +361,7 @@ spram #(15) bramppu_u
 
 spram #(16) bramcpu_l
 (
-	.clock(clk_50),
+	.clock(clk),
 	.address(q[3] ? (cpu_select ? cpu_addr_new[15:0] : ppu_addr_new[15:0]) : addr_scr[15:0]),
 	.data(cpu_select ? cpu_din_new[7:0] : ppu_din_new[23:16] ),
 	.wren(bramcpu_we[0]),
@@ -375,7 +370,7 @@ spram #(16) bramcpu_l
 
 spram #(16) bramcpu_u
 (
-	.clock(clk_50),
+	.clock(clk),
 	.address(q[3] ? (cpu_select ? cpu_addr_new[15:0] : ppu_addr_new[15:0]) : addr_scr[15:0]),
 	.data(cpu_select ? cpu_din_new[15:8] : ppu_din_new[31:24] ),
 	.wren(bramcpu_we[1]),

@@ -335,24 +335,14 @@ video_mixer #(.LINE_LENGTH(832), .GAMMA(1)) video_mixer
 //************************************************
 //* PLL Clocks
 //************************************************
-wire        clk_50;
+wire clk_50, clk_25;
 pll pll (
    .refclk   (CLK_50M),
    .rst      (0),
-   .outclk_0 (clk_50)    // 50MHz
+   .outclk_0 (clk_50),
+   .outclk_1 (clk_25)
 );
 
-reg ce_25, ce_12_5, ce_12_5n, ce_6_25, ce_6_25n;
-always @(negedge clk_50) begin
-   reg [2:0] div;
-
-   div <= div + 1'd1;
-   ce_25    <= !div[0];
-   ce_12_5  <= !div[1:0];
-   ce_12_5n <= div[1] && !div[0];
-   ce_6_25  <= !div[2:0];
-   ce_6_25n <= div[2] && !div[1:0];
-end
 
 ///////////
 wire  [2:0] vgarn;
@@ -360,18 +350,13 @@ wire  [2:0] vgagn;
 wire  [2:0] vgabn;
 //wire        hblank;
 //wire        vblank;
-wire  [9:0] audio;
+wire        audio;
 wire  [6:0] mouse;
 assign AUDIO_R = {15{audio}};
 assign AUDIO_L = AUDIO_R;
 
 UKNC UKNC (
-   .clk_50   (clk_50),
-   .clk_25   (ce_25    & clk_50),
-   .cpuclk_p (ce_12_5  & clk_50),
-   .cpuclk_n (ce_12_5n & clk_50),
-   .ppuclk_p (ce_6_25  & clk_50),
-   .ppuclk_n (ce_6_25n & clk_50),
+   .clk_25   (clk_25),
 
    .ps2_key  (ps2_key),
    .nbut     (~reset_key),
@@ -439,7 +424,7 @@ wire        ackn_ppu_i;
 
 ram ram
 (
-   .clk_50     (clk_50),
+   .clk        (clk_25),
    .reset      (reset_key),
 
    .hsync      (VGA_HS),
@@ -468,13 +453,16 @@ ram ram
 
 
 assign CLK_VIDEO = clk_50;
+assign CE_PIXEL  = ce_pix;
 
-//reg  clk16;
-//always @ (posedge clk32p) clk16 <= ~clk16;
+reg ce_pix;
+always @(negedge clk_50) begin
+   reg [1:0] div;
 
-assign CE_PIXEL  = ce_25;  // (forced_scandoubler ? 1'b1 : clk16);
+   div <= div + 1'd1;
+   ce_pix <= !div[1:0];
+end
 
-//assign VGA_DE = ~(hblank | vblank);
 assign VGA_R = {vgarn,vgarn,vgarn[2:1]};
 assign VGA_G = {vgagn,vgagn,vgagn[2:1]};
 assign VGA_B = {vgabn,vgabn,vgabn[2:1]};
@@ -569,7 +557,7 @@ ide ide (
 wire        msxstb;
 
 ps2mouse msx_mouse (
-   .clk          (clk_50),
+   .clk          (clk_25),
    .reset        (reset_key),
    .strobe       (msxstb),
    .data         (msxmouse),

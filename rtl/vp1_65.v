@@ -1,5 +1,5 @@
 module vp065(
-   input         pin_50MHz_clk,
+   input         pin_clk,
    input         pin_vm_clk_p,
 
    input         pin_vm_init_i,
@@ -122,7 +122,7 @@ wire rx_data_valid;
 wire [7:0]rx_data;
 
 always @(posedge pin_vm_clk_p)begin load_tx_old <= load_tx; end
-always @(posedge pin_50MHz_clk)begin ask_tx_old <= ~tx_en_n & ask_tx; tx_data_valid <= rdreq; end
+always @(posedge pin_clk)begin ask_tx_old <= ~tx_en_n & ask_tx; tx_data_valid <= rdreq; end
 
 wire [7:0]tx_data;
 wire tx_en;
@@ -133,7 +133,7 @@ uartfifo txff1(
    .wrclk  (      pin_vm_clk_p),
    .wrreq  (             wrreq),
 
-   .rdclk  (     pin_50MHz_clk),
+   .rdclk  (           pin_clk),
    .rdreq  (             rdreq),
    .q      (           tx_data),
 
@@ -146,7 +146,7 @@ uart_tx #(
    .BAUD_RATE(19200) //serial baud rate
 ) txuart
 (
-   .clk          ( pin_50MHz_clk),  //clock input
+   .clk          (       pin_clk),  //clock input
    .rst_n        (~pin_vm_init_i),  //asynchronous reset input, low active 
    .tx_data	     (       tx_data),  //data to send
    .tx_data_valid( tx_data_valid),  //data to be sent is valid
@@ -157,7 +157,7 @@ uart_rx #(
    .BAUD_RATE(19200) //serial baud rate
 ) rxuart
 (
-   .clk          ( pin_50MHz_clk),  //clock input
+   .clk          (       pin_clk),  //clock input
    .rst_n        (~pin_vm_init_i),  //asynchronous reset input, low active 
    .rx_data      (       rx_data),  //received serial data
    .rx_data_valid( rx_data_valid),  //received serial data is valid

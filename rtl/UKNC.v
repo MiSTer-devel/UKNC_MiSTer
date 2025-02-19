@@ -1,10 +1,5 @@
 module UKNC (
-   input         clk_50,
    input         clk_25,
-   input         cpuclk_p,
-   input         cpuclk_n,
-   input         ppuclk_p,
-   input         ppuclk_n,
 
    input         nbut,        // reset_n button
    output        sound,
@@ -41,6 +36,22 @@ module UKNC (
    output  [7:0] sd_buff_din,
    input         sd_buff_wr
 );
+
+reg ce_12_5, ce_12_5n, ce_6_25, ce_6_25n;
+always @(negedge clk_25) begin
+   reg [1:0] div;
+
+   div <= div + 1'd1;
+   ce_12_5  <= !div[0];
+   ce_12_5n <=  div[0];
+   ce_6_25  <= !div[1:0];
+   ce_6_25n <= div[1] && !div[0];
+end
+
+wire cpuclk_p = ce_12_5  & clk_25;
+wire cpuclk_n = ce_12_5n & clk_25;
+wire ppuclk_p = ce_6_25  & clk_25;
+wire ppuclk_n = ce_6_25n & clk_25;
 
 //------------------------------------------------------------//
 reg  [23:0]count_rst = 0;
@@ -223,7 +234,7 @@ xm2_01 dd1(
 );
 
 keybrd kbrd(
-   .clk         (clk_50),
+   .clk         (clk_25),
    .rst         (~sys_rst),
 
    .keycode     (keycode),
@@ -425,7 +436,7 @@ vp1_120 vp1
 
 //------------------------------------------------------------//
 vp065 dd2(
-   .pin_50MHz_clk   (clk_50),
+   .pin_clk         (clk_25),
    .pin_vm_clk_p    (cpuclk_n),
 
    .pin_vm_init_i   (cpu_vm_init_o),
