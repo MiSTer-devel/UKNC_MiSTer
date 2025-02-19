@@ -8,24 +8,24 @@ module UKNC (
 
    input         nbut,        // reset_n button
    output        sound,
-	
-	input         vsync,
 
-	output [15:0] addr_cpu_o,
-	output [15:0] data_cpu_o,
-	output        read_cpu_o,
-	output        wrte_cpu_o,
-	output  [1:0] mask_cpu_o,
-	input  [15:0] data_cpu_i,
-	input         ackn_cpu_i,
+   input         vsync,
 
-	output [15:0] addr_ppu_o,
-	output [31:0] data_ppu_o,
-	output        read_ppu_o,
-	output        wrte_ppu_o,
-	output  [3:0] mask_ppu_o,
-	input  [31:0] data_ppu_i,
-	input         ackn_ppu_i,
+   output [15:0] addr_cpu_o,
+   output [15:0] data_cpu_o,
+   output        read_cpu_o,
+   output        wrte_cpu_o,
+   output  [1:0] mask_cpu_o,
+   input  [15:0] data_cpu_i,
+   input         ackn_cpu_i,
+
+   output [15:0] addr_ppu_o,
+   output [31:0] data_ppu_o,
+   output        read_ppu_o,
+   output        wrte_ppu_o,
+   output  [3:0] mask_ppu_o,
+   input  [31:0] data_ppu_i,
+   input         ackn_ppu_i,
 
    input  [10:0] ps2_key,
 

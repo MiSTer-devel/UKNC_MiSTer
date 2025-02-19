@@ -2,15 +2,15 @@ module ram
 (
    // cpu/chipset interface
    input             clk_50,      // sdram is accessed at up to 128MHz
-	input             reset,
-   
+   input             reset,
+
    output reg        hsync,
    output reg        vsync,
    output reg        de,
    output reg [ 2:0] red,
    output reg [ 2:0] green,
    output reg [ 2:0] blue,
-   
+
    input      [15:0] cpu_addr,   // 19 bit address 
    output reg [15:0] cpu_dout,   // data output to cpu
    input      [15:0] cpu_din,    // data input from cpu
@@ -54,10 +54,12 @@ wire        get_regs_new = vert[0] == 1'b0/* synthesis keep */;
 // ---------------------------------------------------------------------
 
 wire startd    = x > 143;
-wire visible_x = x > 16 + 64 + 80;
-wire visible_y = vert < 600;
+wire visible_x = x > 16 + 64 + 80 - 1;
+//wire visible_y = vert < 600;
+wire visible_y = vert > 39 && vert < 616;
 wire hs        = x > 15 && x < 16 + 64;
-wire vs        = vert > 600 + 13 && vert < 600 + 14 + 3;
+//wire vs        = vert > 600 + 13 && vert < 600 + 14 + 3;
+wire vs        = vert > 600 + 20 && vert < 600 + 20 + 3;
 wire visible   = visible_x && visible_y;
 
 wire [ 9:0] xs = startd ?
@@ -102,22 +104,22 @@ reg         curs_set_d;
 always @(posedge clk_50) begin
 
    curs_set_d <= curs_set;
-	if(~curs_set_d & curs_set) vga_curs <= ~vga_curs;
+   if(~curs_set_d & curs_set) vga_curs <= ~vga_curs;
 
    if(new_scr)begin
       vga_adnx  <= 16'o270;
       types_reg <= 0;
       qutro_reg <= 0;
       curs_set  <= 0;
-		curs_set_d<= 0;
+      curs_set_d<= 0;
       indx_reg  <= 0;
-		vga_curs  <= 0;
+      vga_curs  <= 0;
    end 
 // ---------------------------------------------------------------------
 // --------------------------- steps/video ---------------------------
 // ---------------------------------------------------------------------
    if(horz==1599)begin
-      if(vert == 617)vert <= 10'd0;
+      if(vert == 623)vert <= 10'd0;
       else vert <= vert + 1'b1;
       horz <= 11'd0;
    end else horz <= horz + 1'b1;
@@ -161,9 +163,9 @@ always @(posedge clk_50) begin
                else iscursor <= x[4:2]==vga_regi[7:5] ? 1'b1 : 1'b0;
            end else iscursor <= 1'b0;
 
-           tripl[0] <= pr_blue_data [xs[4:2]];
-           tripl[1] <= pr_green_data[xs[4:2]];
-           tripl[2] <= pr_red_data  [xs[4:2]];
+           tripl[0] <= pr_blue_data [xs[4:2] + 7];
+           tripl[1] <= pr_green_data[xs[4:2] + 7];
+           tripl[2] <= pr_red_data  [xs[4:2] + 7];
          end
    'b11: begin
            if(&q && &xs[5:0])begin
@@ -182,8 +184,8 @@ always @(posedge clk_50) begin
 
    ppu_vl <= 0;
    cpu_vl <= 0;
-	bramppu_we <= 0;
-	bramcpu_we <= 0;
+   bramppu_we <= 0;
+   bramcpu_we <= 0;
 
    case (q)
    4'd2 : begin
@@ -242,44 +244,44 @@ always @(posedge clk_50) begin
           end
 
    4'd9 : begin
-				//ppu memory
+            //ppu memory
             if(ppu_wrte_new)begin
-					bramppu_we <= ~ppu_dqm_new[1:0];
+               bramppu_we <= ~ppu_dqm_new[1:0];
                ppu_vl     <= 1'b1;
             end
 
-				//cpu memory
+            //cpu memory
             if(cpu_select)begin
                if(cpu_wrte_new) begin 
-						bramcpu_we <= ~cpu_dqm_new[1:0];
+                  bramcpu_we <= ~cpu_dqm_new[1:0];
                   cpu_vl <= 1'b1;
                end
             end else begin
                if(ppu_wrte_new) begin 
-						bramcpu_we <= ~ppu_dqm_new[3:2];
+                  bramcpu_we <= ~ppu_dqm_new[3:2];
                   ppu_vl <= 1'b1;
                end
             end
           end
 
    4'd10: begin
-				//ppu memory
+            //ppu memory
             if(ppu_read_new)begin 
                ppu_dout[15:0] <= bramppu_data;
                ppu_vl         <= 1'b1;
             end
 
-				//cpu memory
+            //cpu memory
             if(cpu_select) begin
-					if(cpu_read_new) begin
+               if(cpu_read_new) begin
                   cpu_dout <= bramcpu_data;
                   cpu_vl <= 1'b1;
-					end
+               end
             end else begin
-				   if(ppu_read_new) begin
+               if(ppu_read_new) begin
                   ppu_dout[31:16] <= bramcpu_data;
                   ppu_vl <= 1'b1;
-					end
+               end
             end
           end
 
@@ -297,11 +299,11 @@ end
 always @(posedge clk_50) begin
       if(~reset)begin
 //-------------------------------------------------------------------
-		  if(!(ppu_read|ppu_wrte)) ppu_ack <= 1'b0;
-		  if(ppu_vl)               ppu_ack <= 1'b1;
+        if(!(ppu_read|ppu_wrte)) ppu_ack <= 1'b0;
+        if(ppu_vl)               ppu_ack <= 1'b1;
 //-------------------------------------------------------------------
-		  if(!(cpu_read|cpu_wrte)) cpu_ack <= 1'b0;
-		  if(cpu_vl)               cpu_ack <= 1'b1;
+        if(!(cpu_read|cpu_wrte)) cpu_ack <= 1'b0;
+        if(cpu_vl)               cpu_ack <= 1'b1;
 //-------------------------------------------------------------------
       end else begin
          ppu_ack <= 1'b0;
@@ -331,12 +333,12 @@ wire [2:0] g = (cvt[1] & visible ? vga_regi[17] ? 3'b111: cvt[3] ? 3'b110 : 3'b1
 wire [2:0] b = (cvt[0] & visible ? vga_regi[16] ? 3'b111: cvt[3] ? 3'b110 : 3'b100 : 3'd0) | (visible & iscursor ? curB : 3'd0);
 
 always @(posedge clk_50) begin
-	red   <= r;
-	green <= g;
-	blue  <= b;
-	hsync <= hs;
-	vsync <= vs;
-	de    <= visible;
+   red   <= r;
+   green <= g;
+   blue  <= b;
+   hsync <= hs;
+   vsync <= vs;
+   de    <= visible;
 end
 
 //---------------------------------------------------------------------------------------------------------//
@@ -346,20 +348,20 @@ reg   [1:0] bramppu_we, bramcpu_we;
 
 spram #(15) bramppu_l
 (
-	.clock(clk_50),
-	.address(q[3] ? ppu_addr_new[15:1] : get_regs ? addr_reg[15:1] : addr_scr[15:1]),
-	.data(ppu_din_new[7:0]),
-	.wren(bramppu_we[0]),
-	.q(bramppu_data[7:0])
+   .clock(clk_50),
+   .address(q[3] ? ppu_addr_new[15:1] : get_regs ? addr_reg[15:1] : addr_scr[15:1]),
+   .data(ppu_din_new[7:0]),
+   .wren(bramppu_we[0]),
+   .q(bramppu_data[7:0])
 );
 
 spram #(15) bramppu_u
 (
-	.clock(clk_50),
-	.address(q[3] ? ppu_addr_new[15:1] : get_regs ? addr_reg[15:1] : addr_scr[15:1]),
-	.data(ppu_din_new[15:8]),
-	.wren(bramppu_we[1]),
-	.q(bramppu_data[15:8])
+   .clock(clk_50),
+   .address(q[3] ? ppu_addr_new[15:1] : get_regs ? addr_reg[15:1] : addr_scr[15:1]),
+   .data(ppu_din_new[15:8]),
+   .wren(bramppu_we[1]),
+   .q(bramppu_data[15:8])
 );
 
 spram #(16) bramcpu_l
