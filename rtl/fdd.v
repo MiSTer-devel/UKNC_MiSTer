@@ -144,7 +144,16 @@ assign wstart  = {3'b000,write_sd}<<drive;
 
 wire is_clean = ~motor|rbusy;
 
-always @(posedge sd_rd or posedge is_clean)read_sd <= is_clean ? 1'b0 : disk_insert;
+reg  old_sd_rd;
+reg  old_is_clean;
+
+always @(posedge clk_25)
+   begin
+      old_sd_rd <= sd_rd;
+      old_is_clean <= is_clean;
+      if ((~old_sd_rd & sd_rd) | (~old_is_clean & is_clean)) read_sd <= is_clean ? 1'b0 : disk_insert;
+   end
+//always @(posedge sd_rd or posedge is_clean)  read_sd <= is_clean ? 1'b0 : disk_insert;
 //always @(posedge write or posedge is_clean)write_sd <= is_clean ? 1'b0 : _data ? disk_insert : write_sd;
 //---------------------------------------------------------------------------------
 
@@ -155,18 +164,17 @@ always @(posedge clk_25) begin
    if (~clk_dsk_n && clk_dsk) count_word <= _data ? count_word + 1'b1 : 8'd0;
 end
 
-dbufsec16 bffsd(
-   .clock     (clk_25), //input clka
-
-   .address_a (   outaddr), //input [8:0] ada
-   .wren_a    (     outen), //input wrea
-   .data_a    (    inbyte), //input [7:0] dina
-   .q_a       (   outbyte), //output [7:0] douta
-
-   .address_b (count_word), //input [7:0] adb
-   .wren_b    (     write), //input wreb
-   .data_b    (   data_in), //input [15:0] dinb
-   .q_b       (  data_sec) //output [15:0] doutb
+dpram_dif #(9,8,8,16) fdd_fifo
+(
+   .clock     (clk_25),
+   .address_a (outaddr),
+   .data_a    (inbyte),
+   .wren_a    (outen),
+   .q_a       (outbyte),
+   .address_b (count_word),
+   .data_b    (data_in),
+   .wren_b    (write),
+   .q_b       (data_sec)
 );
 
 endmodule

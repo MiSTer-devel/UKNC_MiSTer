@@ -20,5 +20,4 @@ set_global_assignment -name VERILOG_FILE rtl/uart/uart_rx.v
 set_global_assignment -name VERILOG_FILE rtl/uart/uart_rx_path.v
 set_global_assignment -name VERILOG_FILE rtl/uart/uart_tx.v
 set_global_assignment -name VERILOG_FILE rtl/uart/uart_tx_path.v
-set_global_assignment -name QIP_FILE rtl/dbufsec16/dbufsec16.qip
 set_global_assignment -name QIP_FILE rtl/uartfifo/uartfifo.qip
