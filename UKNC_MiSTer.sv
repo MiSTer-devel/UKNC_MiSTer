@@ -344,14 +344,14 @@ pll pll (
 
 reg ce_25, ce_12_5, ce_12_5n, ce_6_25, ce_6_25n;
 always @(negedge clk_50) begin
-	reg [2:0] div;
+   reg [2:0] div;
 
-	div <= div + 1'd1;
-	ce_25    <= !div[0];
-	ce_12_5  <= !div[1:0];
-	ce_12_5n <= div[1] && !div[0];
-	ce_6_25  <= !div[2:0];
-	ce_6_25n <= div[2] && !div[1:0];
+   div <= div + 1'd1;
+   ce_25    <= !div[0];
+   ce_12_5  <= !div[1:0];
+   ce_12_5n <= div[1] && !div[0];
+   ce_6_25  <= !div[2:0];
+   ce_6_25n <= div[2] && !div[1:0];
 end
 
 ///////////
@@ -362,29 +362,29 @@ wire  [2:0] vgabn;
 //wire        vblank;
 wire  [9:0] audio;
 wire  [6:0] mouse;
-assign AUDIO_R = {audio, 6'd0};
+assign AUDIO_R = {15{audio}};
 assign AUDIO_L = AUDIO_R;
 
 UKNC UKNC (
-    .clk_50   (clk_50),
-    .clk_25   (ce_25    & clk_50),
-    .cpuclk_p (ce_12_5  & clk_50),
-    .cpuclk_n (ce_12_5n & clk_50),
-    .ppuclk_p (ce_6_25  & clk_50),
-    .ppuclk_n (ce_6_25n & clk_50),
+   .clk_50   (clk_50),
+   .clk_25   (ce_25    & clk_50),
+   .cpuclk_p (ce_12_5  & clk_50),
+   .cpuclk_n (ce_12_5n & clk_50),
+   .ppuclk_p (ce_6_25  & clk_50),
+   .ppuclk_n (ce_6_25n & clk_50),
 
-    .ps2_key  (ps2_key),
-    .nbut     (~reset_key),
-    .uart_rx  (UART_RXD),
-    .uart_tx  (UART_TXD),
-    .sound    (audio),
-//    .rtc      (rtc),
-//    .msxmouse (msxmouse),
-//    .msxstb   (msxstb),
+   .ps2_key  (ps2_key),
+   .nbut     (~reset_key),
+   .uart_rx  (UART_RXD),
+   .uart_tx  (UART_TXD),
+   .sound    (audio),
+//   .rtc      (rtc),
+//   .msxmouse (msxmouse),
+//   .msxstb   (msxstb),
 
-//   .img_mounted   (img_mounted),   //[2:1]),
-//   .img_size      (img_size),
-//   .img_wp        (0),
+//  .img_mounted   (img_mounted),   //[2:1]),
+//  .img_size      (img_size),
+//  .img_wp        (0),
    .sd_lba        (sd_lba_sd),
    .sd_rd         (sd_rd),
 //   .sd_wr         (sd_wr),
@@ -401,7 +401,7 @@ UKNC UKNC (
    .ide_write     (ide_write),
 */
 
-	.vsync(VGA_VS),
+   .vsync(VGA_VS),
 
    .addr_cpu_o(addr_cpu_o),
    .data_cpu_i(data_cpu_i),
@@ -440,7 +440,7 @@ wire        ackn_ppu_i;
 ram ram
 (
    .clk_50     (clk_50),
-	.reset      (reset_key),
+   .reset      (reset_key),
 
    .hsync      (VGA_HS),
    .vsync      (VGA_VS),
@@ -465,7 +465,6 @@ ram ram
    .ppu_wrte   (wrte_ppu_o),
    .ppu_ack    (ackn_ppu_i)
 );
-
 
 
 assign CLK_VIDEO = clk_50;

@@ -9,7 +9,7 @@ set_global_assignment -name VERILOG_FILE rtl/vm2/vm2_plm.v
 set_global_assignment -name VERILOG_FILE rtl/vm2/vm2_wb.v
 set_global_assignment -name VERILOG_FILE rtl/vp1_120.v
 set_global_assignment -name VERILOG_FILE rtl/vp1_128fdd.v
-set_global_assignment -name VERILOG_FILE rtl/fdd4.v
+set_global_assignment -name VERILOG_FILE rtl/fdd.v
 set_global_assignment -name VERILOG_FILE rtl/vp1_65.v
 set_global_assignment -name VERILOG_FILE rtl/xm2-01.v
 set_global_assignment -name QIP_FILE rtl/rom208/rom208.qip
@@ -20,6 +20,5 @@ set_global_assignment -name VERILOG_FILE rtl/uart/uart_rx.v
 set_global_assignment -name VERILOG_FILE rtl/uart/uart_rx_path.v
 set_global_assignment -name VERILOG_FILE rtl/uart/uart_tx.v
 set_global_assignment -name VERILOG_FILE rtl/uart/uart_tx_path.v
-set_global_assignment -name QIP_FILE rtl/romtrl/romtrl.qip
 set_global_assignment -name QIP_FILE rtl/dbufsec16/dbufsec16.qip
 set_global_assignment -name QIP_FILE rtl/uartfifo/uartfifo.qip

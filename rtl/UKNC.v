@@ -246,7 +246,7 @@ wire        disk_dir     ;
 wire        disk_head    ;
 wire        disk_write   ;
 
-fdd4 fdd(
+fdd fdd(
    .clk_25       (       clk_25),
    .ppu_vm_init_i(ppu_vm_init_o),
 

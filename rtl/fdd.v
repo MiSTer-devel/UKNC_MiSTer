@@ -1,4 +1,4 @@
-module fdd4(
+module fdd(
    input         clk_25,
    input         ppu_vm_init_i,
 
@@ -24,7 +24,6 @@ module fdd4(
    output [ 3:0] wstart,
    output [31:0] rsector,
    input         rbusy,
-//   input         rdone,
 
    output [ 7:0] outbyte,
    input         outen,   // when outen=1, a byte of sector content
@@ -61,15 +60,30 @@ assign tr0      = !no_trk && motor;
 //reg  [15:0] data_out = 16'h0000;
 wire disk_insert = mount_dsk[drive];
 
-always @(*)
-    case({disk_insert,_data,_sek,_trk})
-    'b1000 : data_out <= data_raw;
-    'b1001 : data_out <= {no_trk,7'd0,head};
-//    'b1001 : data_out <= {1'b0,no_trk,7'd0,head};
-    'b1010 : data_out <= {4'd0,no_sec+1'b1,8'd2};
-    'b1100 : data_out <= {data_sec[7:0],data_sec[15:8]};
-    default: data_out <= 16'h4E4E;
-    endcase
+//---------------------------------------------------------------------------------
+// raw sectr, emul raw trk
+// kolesiko krutit'sa - lave mutit'sa
+//---------------------------------------------------------------------------------
+
+always @(posedge clk_25) begin
+   if (disk_insert) begin
+      if  (_data) data_out <= {data_sec[7:0],data_sec[15:8]};
+      else
+      case (word_sectr)
+         9'h01A:   data_out <= {no_trk,7'd0,head};
+         9'h01B:   data_out <= {4'd0,no_sec+1'b1,8'd2};  // data_out <= 16'h0102;
+         9'h012,
+         9'h029:   data_out <= 16'h0000;
+         9'h018,
+         9'h02F:   data_out <= 16'hA1A1;
+         9'h019:   data_out <= 16'hA1FE;
+         9'h01C,
+         9'h131:   data_out <= 16'h9315;
+         9'h030:   data_out <= 16'hA1FB;
+      default:  data_out <= 16'h4E4E;
+   endcase
+   end else data_out <= 16'h4E4E;
+end 
 //---------------------------------------------------------------------------------
 reg         step_old;
 reg         head_old = 1'b1;
@@ -82,7 +96,6 @@ end
 
 always @(posedge clk_25)
     if(!motor || step || head_old!=head || drive_old!=drive)begin
-        //no_sec     <=  4'h8;
         word_sectr <=  9'h0;
         clk_dsk    <=  1'b0;
         clk_dsk_n  <=  1'b0;
@@ -105,39 +118,19 @@ always @(posedge clk_25)
 //---------------------------------------------------------------------------------
     end
 //---------------------------------------------------------------------------------
-// raw sectr, emul raw trk
-// kolesiko krutit'sa - lave mutit'sa
-//---------------------------------------------------------------------------------
-wire [15:0] data_raw;
-romtrl romtr1(
-        .q       ( data_raw ),   //output [15:0] dout
-        .clock   ( clk_25 ),     //input clk
-        .address ( word_sectr )  //input [8:0] ad
-    );
-//---------------------------------------------------------------------------------
 // SD-Card controller
 //---------------------------------------------------------------------------------
 wire [31:0] sd_sec = {no_trk,head,3'b000}+{no_trk,head,1'b0} + no_sec;
 //---------------------------------------------------------------------------------
 reg  sd_rd = 1'b0;
-reg  _trk  = 1'b0;
-reg  _sek  = 1'b0;
 reg  _data = 1'b0;
-//reg  reset_fifo = 1'b0;
 
 always @(posedge clk_dsk_n or negedge motor)
     if(!motor)begin
-        //reset_fifo <= 1'b1; //3
         sd_rd <= 1'b0;
-        _trk  <= 1'b0;
-        _sek  <= 1'b0;
         _data <= 1'b0;
     end else begin
-    //sd_rd = word_sectr == 9'h5  && motor ? 1'b1 : 1'b0;
-        //reset_fifo <= word_sectr == 9'h13 ? 1'b1 : 1'b0; //3
         sd_rd      <= word_sectr == 9'h1C ? 1'b1 : 1'b0;
-        _trk       <= word_sectr == 9'h1A ? 1'b1 : 1'b0;
-        _sek       <= word_sectr == 9'h1B ? 1'b1 : 1'b0;
         _data      <= word_sectr >= 9'h31 && word_sectr <= 9'h130 ? 1'b1 : 1'b0;
     end
 
@@ -154,7 +147,6 @@ wire is_clean = ~motor|rbusy;
 always @(posedge sd_rd or posedge is_clean)read_sd <= is_clean ? 1'b0 : disk_insert;
 //always @(posedge write or posedge is_clean)write_sd <= is_clean ? 1'b0 : _data ? disk_insert : write_sd;
 //---------------------------------------------------------------------------------
-//wire reset_fifo = word_sectr == 9'h13 || !motor; //3
 
 wire [15:0] data_sec;
 reg  [ 7:0] count_word = 8'd0;
