@@ -29,7 +29,7 @@ module UKNC (
 
    output [10:0] sd_lba,
    output        sd_rd,
-//   output        sd_wr,
+   output        sd_wr,
    input         sd_ack,
    input   [8:0] sd_buff_addr,
    input   [7:0] sd_buff_dout,
@@ -280,7 +280,7 @@ fdd fdd(
 //   .led_init     (      leds[5]),
    
    .rstart       ( sd_rd ),
-//   .wstart       ( sd_wr),
+   .wstart       ( sd_wr),
    .rsector      ( sd_lba ),
    .rbusy        (      sd_busy),
 //   .rdone        (      sd_done),
@@ -324,39 +324,6 @@ vp1_128fdd vp128(
     .ind          (     disk_ind),
     .wrprt_dsk    (system_floppy_wprot)
 ); 
-
-/*vp1_128a d128(
-   .pin_25mhz_ck    (clk_25),
-   .ppu_vm_clk_p    (ppuclk_n),
-
-   .ppu_vm_init_i   (ppu_vm_init_o),
-
-   .ppu_wbm_adr_i   (ppu_wbm_adr_o),
-   .ppu_wbm_dat_i   (ppu_wbm_dat_o),
-   .ppu_wbm_dat_o   (ppu_wbm_dat_i_128),
-   .ppu_wbm_cyc_i   (ppu_wbm_cyc_o),
-   .ppu_wbm_wre_i   (ppu_wbm_wre_o),
-   .ppu_wbm_stb_i   (ppu_wbm_stb_o),
-   .ppu_wbm_ack_o   (ppu_wbm_ack_i_128),
-
-//  .img_mounted   (img_mounted),
-//   .img_size     (img_size),
-//   .img_wp       (0),
-   .sd_lba          (sd_lba),
-   .sd_rd           (sd_rd),
-//   .sd_wr           (sd_wr),
-   .sd_ack          (sd_ack),
-   .sd_buff_addr    (sd_buff_addr),
-   .sd_buff_dout    (sd_buff_dout),
-   .sd_buff_din     (sd_buff_din),
-   .sd_buff_wr      (sd_buff_wr),
-
-//   .wite_clk_o      (wite_clk_128),
-   .motor_on_o      (motor_on_128)
-
-//   .led             (segs[4]),
-//   .led_init        (segs[5])
-);*/
 
 //------------------------------------------------------------//
 cpu_wb cpu1(

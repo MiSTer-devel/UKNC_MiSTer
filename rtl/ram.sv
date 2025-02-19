@@ -3,9 +3,11 @@ module ram
    input             clk,
    input             reset,
 
+   output            ce_pix,
    output reg        hsync,
    output reg        vsync,
-   output reg        de,
+   output reg        hblank,
+   output reg        vblank,
    output reg [ 2:0] red,
    output reg [ 2:0] green,
    output reg [ 2:0] blue,
@@ -34,8 +36,6 @@ reg [15:0] vga_adnx = 16'o270;  // address next string
 reg        qutro_reg;
 reg        types_reg;
 reg        vga_curs;
-reg        ppu_vl;
-reg        cpu_vl;
 reg        curs_set;
 reg [31:0] vga_regi;        // vga register isobr
 reg [31:0] vga_regc;        // vga register color
@@ -53,11 +53,9 @@ wire        get_regs     = get_regs0|get_regs1|get_regs2|get_regs3/* synthesis k
 
 wire startd    = x > 143;
 wire visible_x = x > 159;
-//wire visible_y = vert < 600;
 wire visible_y = vert > 19 && vert < 308;
 wire hs        = x > 15 && x < 16 + 64;
 wire vs        = vert > 309;
-wire visible   = visible_x && visible_y;
 
 wire [ 9:0] xs = startd ?
                  vga_regi[21:20] == 2'b00 ? x - 10'd144 :
@@ -97,6 +95,8 @@ reg  [ 7:0] red_data;
 reg  [ 2:0] tripl;
 reg         iscursor;
 reg         curs_set_d;
+
+assign ce_pix = horz[0];
 
 always @(posedge clk) begin
 
@@ -179,10 +179,10 @@ always @(posedge clk) begin
          end
    endcase
 
-   ppu_vl <= 0;
-   cpu_vl <= 0;
    bramppu_we <= 0;
    bramcpu_we <= 0;
+   if(!(ppu_read|ppu_wrte)) ppu_ack <= 0;
+   if(!(cpu_read|cpu_wrte)) cpu_ack <= 0;
 
    case (q)
    4'd2 : begin
@@ -242,19 +242,19 @@ always @(posedge clk) begin
             //ppu memory
             if(ppu_wrte_new)begin
                bramppu_we <= ~ppu_dqm_new[1:0];
-               ppu_vl     <= 1'b1;
+               ppu_ack     <= 1'b1;
             end
 
             //cpu memory
             if(cpu_select)begin
                if(cpu_wrte_new) begin 
                   bramcpu_we <= ~cpu_dqm_new[1:0];
-                  cpu_vl <= 1'b1;
+                  cpu_ack <= 1'b1;
                end
             end else begin
                if(ppu_wrte_new) begin 
                   bramcpu_we <= ~ppu_dqm_new[3:2];
-                  ppu_vl <= 1'b1;
+                  ppu_ack <= 1'b1;
                end
             end
           end
@@ -263,19 +263,19 @@ always @(posedge clk) begin
             //ppu memory
             if(ppu_read_new)begin 
                ppu_dout[15:0] <= bramppu_data;
-               ppu_vl         <= 1'b1;
+               ppu_ack        <= 1'b1;
             end
 
             //cpu memory
             if(cpu_select) begin
                if(cpu_read_new) begin
                   cpu_dout <= bramcpu_data;
-                  cpu_vl <= 1'b1;
+                  cpu_ack <= 1'b1;
                end
             end else begin
                if(ppu_read_new) begin
                   ppu_dout[31:16] <= bramcpu_data;
-                  ppu_vl <= 1'b1;
+                  ppu_ack <= 1'b1;
                end
             end
           end
@@ -288,23 +288,6 @@ always @(posedge clk) begin
    endcase
 end
 
-//-------------------------------------------------------------------
-//-------------PPU/CPU busy/asck signals-----------------------------
-//-------------------------------------------------------------------
-always @(posedge clk) begin
-      if(~reset)begin
-//-------------------------------------------------------------------
-        if(!(ppu_read|ppu_wrte)) ppu_ack <= 1'b0;
-        if(ppu_vl)               ppu_ack <= 1'b1;
-//-------------------------------------------------------------------
-        if(!(cpu_read|cpu_wrte)) cpu_ack <= 1'b0;
-        if(cpu_vl)               cpu_ack <= 1'b1;
-//-------------------------------------------------------------------
-      end else begin
-         ppu_ack <= 1'b0;
-         cpu_ack <= 1'b0;
-      end
-   end
 //---------------------------------------------------------------------------------------------------------//
 //          VGA generator
 //---------------------------------------------------------------------------------------------------------//
@@ -333,7 +316,8 @@ always @(posedge clk) begin
    blue  <= b;
    hsync <= hs;
    vsync <= vs;
-   de    <= visible;
+   hblank<= ~visible_x;
+   vblank<= ~visible_y;
 end
 
 //---------------------------------------------------------------------------------------------------------//
