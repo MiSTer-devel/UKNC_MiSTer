@@ -3,6 +3,7 @@ set_global_assignment -name SDC_FILE UKNC.sdc
 set_global_assignment -name SYSTEMVERILOG_FILE UKNC_MiSTer.sv
 set_global_assignment -name VHDL_FILE rtl/bram.vhd
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/ram.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/video.sv
 set_global_assignment -name VERILOG_FILE rtl/ppu.v
 set_global_assignment -name VERILOG_FILE rtl/cpu.v
 set_global_assignment -name VERILOG_FILE rtl/vm2/vm2_plm.v

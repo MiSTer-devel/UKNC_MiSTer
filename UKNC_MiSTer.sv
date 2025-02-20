@@ -360,16 +360,11 @@ wire        HSync,VSync;
 ram ram
 (
    .clk        (clk_25),
-   .reset      (reset_key),
 
-	.ce_pix     (ce_pix),
-   .hsync      (HSync),
-   .vsync      (VSync),
-   .hblank     (HBlank),
-   .vblank     (VBlank),
-   .red        (r),
-   .green      (g),
-   .blue       (b),
+	.cycle      (cycle),
+	.scr_addr   (scr_addr),
+	.scr_data1  (scr_data1),
+	.scr_data2  (scr_data2),
 
    .cpu_addr   (addr_cpu_o),
    .cpu_dout   (data_cpu_i),
@@ -388,6 +383,29 @@ ram ram
    .ppu_ack    (ackn_ppu_i)
 );
 
+wire  [3:0] cycle;
+wire [15:0] scr_addr;
+wire [15:0] scr_data1;
+wire [15:0] scr_data2;
+
+video video
+(
+   .clk        (clk_25),
+
+	.ce_pix     (ce_pix),
+   .hsync      (HSync),
+   .vsync      (VSync),
+   .hblank     (HBlank),
+   .vblank     (VBlank),
+   .red        (r),
+   .green      (g),
+   .blue       (b),
+	
+	.cycle      (cycle),
+	.addr_scr   (scr_addr),
+	.data1      (scr_data1),
+	.data2      (scr_data2)
+);
 
 assign CLK_VIDEO = clk_50;
 
