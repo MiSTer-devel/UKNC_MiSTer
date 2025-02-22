@@ -1,6 +1,6 @@
 # [Elektronika MS-0511 ak UKNC](https://en.wikipedia.org/wiki/UKNC) for: [MiSTer Board](https://github.com/MiSTer-devel/Wiki_MiSTer/wiki).
 
-Based on [1801ВМ2 (PDP-11 compatible) microprocessors reverse engineering](https://github.com/1801BM1/cpu11) and [Open replica Soyuz Neon PK11/16](https://zx-pk.ru/threads/29407-proekt-otkrytoj-repliki-soyuz-neon-pk-11-16.html).
+Based on [1801ВМ2 (PDP-11 compatible) microprocessors reverse engineering](https://github.com/1801BM1/cpu11).
 
 Keyboard:
 ![Keyborad layout](/doc/ms7007.png)
