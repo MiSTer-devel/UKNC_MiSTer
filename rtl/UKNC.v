@@ -28,13 +28,15 @@ module UKNC (
    input         uart_rx,
 
    output [10:0] sd_lba,
-   output        sd_rd,
-   output        sd_wr,
+   output  [3:0] sd_rd,
+   output  [3:0] sd_wr,
    input         sd_ack,
    input   [8:0] sd_buff_addr,
    input   [7:0] sd_buff_dout,
    output  [7:0] sd_buff_din,
-   input         sd_buff_wr
+   input         sd_buff_wr,
+   input   [3:0] img_mounted,
+   input  [19:0] img_size
 );
 
 reg ce_12_5, ce_12_5n, ce_6_25, ce_6_25n;
@@ -204,7 +206,6 @@ wire  [7:0] keycode;
 xm2_01 dd1(
    .pin_vm_clk25    (clk_25),
 
-//   .pin_vm_clk_p    (ppuclk_n),
    .pin_vm_clk_p    (ppuclk_p),
    .pin_vm_init_i   (ppu_vm_init_o),
    .pin_vm_virq_o   (ppu_vm_virq_i_xm2),
@@ -258,71 +259,69 @@ wire        disk_head    ;
 wire        disk_write   ;
 
 fdd fdd(
-   .clk_25       (       clk_25),
-   .ppu_vm_init_i(ppu_vm_init_o),
+   .clk_25       ( clk_25 ),
+   .ppu_vm_init_i( ppu_vm_init_o ),
 
-   .data_in      ( disk_data_in),
-   .data_out     (disk_data_out),
-   .write        (   disk_write),
+   .data_in      ( disk_data_in ),
+   .data_out     ( disk_data_out ),
+   .write        ( disk_write ),
 
-   .drive        (   disk_drive),
-   .motor        (   disk_motor),
-   .step         (    disk_step),
-   .dir          (     disk_dir),
-   .head         (    disk_head),
-   .valid        (   disk_valid),
-   .sync         (    disk_sync),
-   .crc_ok       (  disk_crc_ok),
-   .rdy          (     disk_rdy),
-   .tr0          (     disk_tr0),
-   .ind          (     disk_ind),
+   .drive        ( disk_drive ),
+   .motor        ( disk_motor ),
+   .step         ( disk_step ),
+   .dir          ( disk_dir ),
+   .head         ( disk_head ),
+   .valid        ( disk_valid ),
+   .sync         ( disk_sync ),
+   .crc_ok       ( disk_crc_ok ),
+   .rdy          ( disk_rdy ),
+   .tr0          ( disk_tr0 ),
+   .ind          ( disk_ind ),
 
 //   .led_init     (      leds[5]),
    
    .rstart       ( sd_rd ),
    .wstart       ( sd_wr),
    .rsector      ( sd_lba ),
-   .rbusy        (      sd_busy),
-//   .rdone        (      sd_done),
+   .sd_ack       ( sd_ack ),
 
    .outen        ( sd_buff_wr ),
    .outaddr      ( sd_buff_addr ),
    .inbyte       ( sd_buff_dout ),
    .outbyte      ( sd_buff_din ),
-//   .mount_dsk    ( mount_dsk )
-   .mount_dsk    ( 4'b0001 )
+   .img_mounted  ( img_mounted ),
+   .img_size     ( img_size )
 );
 
 vp1_128fdd vp128(
-//    .ppu_vm_clk_p (         ppuclk_n),
-    .ppu_vm_clk_p (         ppuclk_p),
-    
-    .ppu_vm_init_i(    ppu_vm_init_o),
+    .ppu_vm_clk_p ( ppuclk_p ),
 
-    .ppu_wbm_adr_i(    ppu_wbm_adr_o),
-    .ppu_wbm_dat_i(    ppu_wbm_dat_o),
-    .ppu_wbm_dat_o(ppu_wbm_dat_i_128),
-    .ppu_wbm_cyc_i(    ppu_wbm_cyc_o),
-    .ppu_wbm_wre_i(    ppu_wbm_wre_o),
-    .ppu_wbm_stb_i(    ppu_wbm_stb_o),
-    .ppu_wbm_ack_o(ppu_wbm_ack_i_128),
+    .ppu_vm_init_i( ppu_vm_init_o ),
 
-    .data_in      (    disk_data_out),
-    .data_out     (     disk_data_in),
-    .write        (       disk_write),
+    .ppu_wbm_adr_i( ppu_wbm_adr_o ),
+    .ppu_wbm_dat_i( ppu_wbm_dat_o ),
+    .ppu_wbm_dat_o( ppu_wbm_dat_i_128 ),
+    .ppu_wbm_cyc_i( ppu_wbm_cyc_o ),
+    .ppu_wbm_wre_i( ppu_wbm_wre_o ),
+    .ppu_wbm_stb_i( ppu_wbm_stb_o ),
+    .ppu_wbm_ack_o( ppu_wbm_ack_i_128 ),
 
-    .drive        (   disk_drive),
-    .motor        (   disk_motor),
-    .step         (    disk_step),
-    .dir          (     disk_dir),
-    .head         (    disk_head),
-    .valid        (   disk_valid),
-    .sync         (    disk_sync),
-    .crc_ok       (  disk_crc_ok),
-    .rdy          (     disk_rdy),
-    .tr0          (     disk_tr0),
-    .ind          (     disk_ind),
-    .wrprt_dsk    (system_floppy_wprot)
+    .data_in      ( disk_data_out ),
+    .data_out     ( disk_data_in ),
+    .write        ( disk_write ),
+
+    .drive        ( disk_drive ),
+    .motor        ( disk_motor ),
+    .step         ( disk_step ),
+    .dir          ( disk_dir ),
+    .head         ( disk_head ),
+    .valid        ( disk_valid ),
+    .sync         ( disk_sync ),
+    .crc_ok       ( disk_crc_ok ),
+    .rdy          ( disk_rdy ),
+    .tr0          ( disk_tr0 ),
+    .ind          ( disk_ind ),
+    .wrprt_dsk    ( system_floppy_wprot )
 ); 
 
 //------------------------------------------------------------//

@@ -1,4 +1,4 @@
-module fdd(
+module fdd (
    input         clk_25,
    input         ppu_vm_init_i,
 
@@ -24,12 +24,14 @@ module fdd(
    output [ 3:0] wstart,
    output [31:0] rsector,
    input         rbusy,
+   input         sd_ack,
 
    output [ 7:0] outbyte,
    input         outen,   // when outen=1, a byte of sector content
    input  [ 8:0] outaddr, // outaddr from 0 to 511, because the sector size is 512
    input  [ 7:0] inbyte,   // a byte of sector content 
-   input  [ 3:0] mount_dsk
+   input  [ 3:0] img_mounted,
+   input  [19:0] img_size
 );
 //---------------------------------------------------------------------------------
 // Size dsk image in sectors
@@ -57,8 +59,20 @@ assign crc_ok   = (word_sectr == 9'h1C || word_sectr == 9'h131) && motor;
 assign ind      = (word_sectr >= 9'h01 || word_sectr <= 9'h4) && motor;
 assign tr0      = !no_trk && motor;
 
-//reg  [15:0] data_out = 16'h0000;
 wire disk_insert = mount_dsk[drive];
+reg  [3:0] mount_dsk;
+reg  [3:0] old_img_mounted;
+
+always @(posedge clk_25) begin
+   integer i;
+   old_img_mounted <= img_mounted;
+
+   for(i = 0; i < 4; i = i+1'd1) begin
+      if (~old_img_mounted[i] && img_mounted[i]) begin
+         mount_dsk[i] <= |img_size;
+      end
+   end
+end
 
 //---------------------------------------------------------------------------------
 // raw sectr, emul raw trk
@@ -169,7 +183,7 @@ dpram_dif #(9,8,8,16) fdd_fifo
    .clock     (clk_25),
    .address_a (outaddr),
    .data_a    (inbyte),
-   .wren_a    (outen),
+   .wren_a    (outen & sd_ack),
    .q_a       (outbyte),
    .address_b (count_word),
    .data_b    (data_in),

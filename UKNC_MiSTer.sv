@@ -304,17 +304,17 @@ UKNC UKNC (
 //   .msxmouse (msxmouse),
 //   .msxstb   (msxstb),
 
-//  .img_mounted   (img_mounted),   //[2:1]),
-//  .img_size      (img_size),
-//  .img_wp        (0),
    .sd_lba        (sd_lba_sd),
    .sd_rd         (sd_rd),
-//   .sd_wr         (sd_wr),
-   .sd_ack        (sd_ack),
+   .sd_wr         (sd_wr),
+   .sd_ack        (|sd_ack),
    .sd_buff_addr  (sd_buff_addr),
    .sd_buff_dout  (sd_buff_dout),
    .sd_buff_din   (sd_buff_din_sd),
    .sd_buff_wr    (sd_buff_wr),
+   .img_mounted   (img_mounted),   //[2:1]),
+   .img_size      (img_size[19:0]),
+//  .img_wp        (0),
 
    .vsync(VSync),
 
@@ -392,7 +392,7 @@ video video
 (
    .clk        (clk_25),
 
-	.ce_pix     (ce_pix),
+   .ce_pix     (ce_pix),
    .hsync      (HSync),
    .vsync      (VSync),
    .hblank     (HBlank),
@@ -400,11 +400,11 @@ video video
    .red        (r),
    .green      (g),
    .blue       (b),
-	
-	.cycle      (cycle),
-	.addr_scr   (scr_addr),
-	.data1      (scr_data1),
-	.data2      (scr_data2)
+
+   .cycle      (cycle),
+   .addr_scr   (scr_addr),
+   .data1      (scr_data1),
+   .data2      (scr_data2)
 );
 
 assign CLK_VIDEO = clk_50;
