@@ -1,4 +1,4 @@
-# [Elektronika MS-0511 ak UKNC](https://en.wikipedia.org/wiki/UKNC) for: [MiSTer Board](https://github.com/MiSTer-devel/Wiki_MiSTer/wiki).
+# [Elektronika MS-0511 aka UKNC](https://en.wikipedia.org/wiki/UKNC) for: [MiSTer Board](https://github.com/MiSTer-devel/Wiki_MiSTer/wiki).
 
 Based on [1801ВМ2 (PDP-11 compatible) microprocessors reverse engineering](https://github.com/1801BM1/cpu11).
 

@@ -234,7 +234,7 @@ xm2_01 dd1(
    .sound           (sound)
 );
 
-keybrd kbrd(
+keyboard keyboard(
    .clk         (clk_25),
    .rst         (~sys_rst),
 

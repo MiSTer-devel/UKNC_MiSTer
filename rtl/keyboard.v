@@ -1,5 +1,4 @@
-
-module keybrd
+module keyboard
 (
    input            clk,
    input            rst,
@@ -23,12 +22,12 @@ always begin
 			  8'h6B: ukey = 8'o116; // row left
 			  8'h74: ukey = 8'o133; // row right
 			  8'h1F: ukey = 8'o066; // GRAF - Win
-			  8'h5A: ukey = 8'o166; // num Enter
+			  8'h5A: ukey = 8'o166; // Num Enter
+			  8'h4A: ukey = 8'o131; // Num / - +
 			default: ukey = 0;
 		endcase
 	else 
 		case (code)
-			  8'h5A: ukey = 8'o153; // Enter
 			  8'h1C: ukey = 8'o072; // A
 			  8'h32: ukey = 8'o076; // B
 			  8'h21: ukey = 8'o050; // C
@@ -65,26 +64,30 @@ always begin
 			  8'h3D: ukey = 8'o016; // 7
 			  8'h3E: ukey = 8'o017; // 8
 			  8'h46: ukey = 8'o177; // 9
-			  8'h0E: ukey = 8'o077; // ~ - Р®/@
-			  8'h55: ukey = 8'o175; // -/=
-			  8'h5D: ukey = 8'o136; // Р­/\
-			  8'h54: ukey = 8'o036; // РЁ/[
-			  8'h5B: ukey = 8'o037; // Р©/]
-			  8'h4C: ukey = 8'o007; // ;/+
-			  8'h41: ukey = 8'o117; // ,/<
-			  8'h49: ukey = 8'o135; // ./>
-			  8'h4A: ukey = 8'o173; // / ?
-			  8'h66: ukey = 8'o132; // BRACKE SPACE
+			  8'h0E: ukey = 8'o007; // ~ / ; +
+			  8'h52: ukey = 8'o077; // ' / @ Ю
+			  8'h4E: ukey = 8'o175; // - / - =
+			  8'h55: ukey = 8'o110; // = /   Ч
+			  8'h5D: ukey = 8'o136; // ­\ / \ Э
+			  8'h54: ukey = 8'o036; // [ / [ Ш
+			  8'h5B: ukey = 8'o037; // ] / ] Щ
+			  8'h41: ukey = 8'o117; // , / <
+			  8'h49: ukey = 8'o135; // . / >
+			  8'h4A: ukey = 8'o173; // / / / ?
+			  8'h4C: ukey = 8'o174; // : / : *
+			  8'h5A: ukey = 8'o153; // Enter
+			  8'h66: ukey = 8'o132; // Back Space
 			  8'h76: ukey = 8'o006; // ESC - AP2
 			  8'h0D: ukey = 8'o026; // TAB
-			  8'h14: ukey = 8'o046; // Ctrl - UPR
 			  8'h29: ukey = 8'o113; // Space
 			  8'h83: ukey = 8'o004; // F7  - STOP
 			  8'h78: ukey = 8'o171; // F11 - RST
 			  8'h09: ukey = 8'o151; // F10 - ISP
 			  8'h01: ukey = 8'o152; // F9  - UST
 			  8'h0A: ukey = 8'o172; // F8  - POM
-			  8'h12: ukey = 8'o105; // Shift
+			  8'h14: ukey = 8'o046; // Ctrl - UPR
+			  8'h12,
+			  8'h59: ukey = 8'o105; // Shift - HP
 			  8'h58: ukey = 8'o107; // Caps - Fix
 			  8'h11: ukey = 8'o106; // Alt - Alf
 			  8'h05: ukey = 8'o010; // F1 - K1
@@ -92,9 +95,6 @@ always begin
 			  8'h04: ukey = 8'o012; // F3 - K3
 			  8'h0C: ukey = 8'o014; // F4 - K4
 			  8'h03: ukey = 8'o015; // F5 - K5
-			  8'h7C: ukey = 8'o174; // *
-			  8'h52: ukey = 8'o005; // Num '
-			  8'h4E: ukey = 8'o025; // Num -   
 			  8'h70: ukey = 8'o126; // Num 0
 			  8'h69: ukey = 8'o127; // Num 1
 			  8'h72: ukey = 8'o147; // Num 2
@@ -105,6 +105,10 @@ always begin
 			  8'h6C: ukey = 8'o125; // Num 7
 			  8'h75: ukey = 8'o145; // Num 8
 			  8'h7D: ukey = 8'o165; // Num 9
+			  8'h7C: ukey = 8'o025; // Num * / -
+			  8'h7B: ukey = 8'o005; // Num - / ,
+			  8'h79: ukey = 8'o155; // Num + / Ъ
+			  8'h71: ukey = 8'o146; // Num .
 			default: ukey = 0;
 		endcase
 end
