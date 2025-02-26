@@ -25,11 +25,17 @@ module ram
    output reg        ppu_ack     // dout is valid. Ready to accept new read/write.
 );
 
-wire cpu_select = &ppu_dqm[3:2];
+wire cpu_select = &ppu_dqm_new[3:2];
 
+reg  [15:0] cpu_addr_new;
+reg  [15:0] cpu_din_new;
+reg  [ 1:0] cpu_dqm_new;
 reg         cpu_read_new;
 reg         cpu_wrte_new;
 
+reg  [15:0] ppu_addr_new;
+reg  [31:0] ppu_din_new;
+reg  [ 3:0] ppu_dqm_new;
 reg         ppu_read_new;
 reg         ppu_wrte_new;
 
@@ -43,8 +49,15 @@ always @(posedge clk) begin
 
    case (cycle[2:0])
       0: begin
+            cpu_addr_new <= cpu_addr;
+            cpu_din_new  <= cpu_din;
+            cpu_dqm_new  <= cpu_dqm;
             cpu_read_new <= cpu_read;
             cpu_wrte_new <= cpu_wrte;
+
+            ppu_addr_new <= ppu_addr;
+            ppu_din_new  <= ppu_din;
+            ppu_dqm_new  <= ppu_dqm;
 
             ppu_read_new <= ppu_read & ppu_emul[0];
             ppu_wrte_new <= ppu_wrte & ppu_emul[0];
@@ -55,19 +68,19 @@ always @(posedge clk) begin
       1: begin
             //ppu memory
             if(ppu_wrte_new)begin
-               bramppu_we <= ~ppu_dqm[1:0];
+               bramppu_we <= ~ppu_dqm_new[1:0];
                ppu_ack     <= 1'b1;
             end
 
             //cpu memory
             if(cpu_select)begin
                if(cpu_wrte_new) begin 
-                  bramcpu_we <= ~cpu_dqm[1:0];
+                  bramcpu_we <= ~cpu_dqm_new[1:0];
                   cpu_ack <= 1'b1;
                end
             end else begin
                if(ppu_wrte_new) begin 
-                  bramcpu_we <= ~ppu_dqm[3:2];
+                  bramcpu_we <= ~ppu_dqm_new[3:2];
                   ppu_ack <= 1'b1;
                end
             end
@@ -103,8 +116,8 @@ dpram #(15) bramppu_l
 (
    .clock(clk),
 
-   .address_a(ppu_addr[15:1]),
-   .data_a(ppu_din[7:0]),
+   .address_a(ppu_addr_new[15:1]),
+   .data_a(ppu_din_new[7:0]),
    .wren_a(bramppu_we[0]),
    .q_a(bramppu_data[7:0]),
 
@@ -116,8 +129,8 @@ dpram #(15) bramppu_u
 (
    .clock(clk),
 
-   .address_a(ppu_addr[15:1]),
-   .data_a(ppu_din[15:8]),
+   .address_a(ppu_addr_new[15:1]),
+   .data_a(ppu_din_new[15:8]),
    .wren_a(bramppu_we[1]),
    .q_a(bramppu_data[15:8]),
 
@@ -129,8 +142,8 @@ dpram #(16) bramcpu_l
 (
    .clock(clk),
 
-   .address_a(cpu_select ? cpu_addr[15:0] : ppu_addr[15:0]),
-   .data_a(cpu_select ? cpu_din[7:0] : ppu_din[23:16] ),
+   .address_a(cpu_select ? cpu_addr_new[15:0] : ppu_addr_new[15:0]),
+   .data_a(cpu_select ? cpu_din_new[7:0] : ppu_din_new[23:16] ),
    .wren_a(bramcpu_we[0]),
    .q_a(bramcpu_data[7:0]),
 
@@ -142,8 +155,8 @@ dpram #(16) bramcpu_u
 (
    .clock(clk),
 
-   .address_a(cpu_select ? cpu_addr[15:0] : ppu_addr[15:0]),
-   .data_a(cpu_select ? cpu_din[15:8] : ppu_din[31:24] ),
+   .address_a(cpu_select ? cpu_addr_new[15:0] : ppu_addr_new[15:0]),
+   .data_a(cpu_select ? cpu_din_new[15:8] : ppu_din_new[31:24] ),
    .wren_a(bramcpu_we[1]),
    .q_a(bramcpu_data[15:8]),
 
