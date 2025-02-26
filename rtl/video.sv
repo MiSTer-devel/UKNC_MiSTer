@@ -1,4 +1,3 @@
-
 module video
 (
    input             clk,
@@ -11,12 +10,12 @@ module video
    output reg [ 2:0] red,
    output reg [ 2:0] green,
    output reg [ 2:0] blue,
-	
-	output      [3:0] cycle,
-	
-	output reg [15:0] addr_scr,
-	input      [15:0] data1,
-	input      [15:0] data2
+
+   output      [3:0] cycle,
+
+   output reg [15:0] addr_scr,
+   input      [15:0] data1,
+   input      [15:0] data2
 );
 
 reg [10:0] horz;
@@ -40,7 +39,7 @@ wire get_regs3 = x[9:3] == 6;
 wire get_regs  = get_regs0|get_regs1|get_regs2|get_regs3;
 
 wire visible_x = x >= 160;
-wire visible_y = vert >= 20 && vert < 308;
+wire visible_y = vert >= 19 && vert < 307;
 wire hs        = x >= 16 && x < 80;
 wire vs        = vert >= 310;
 

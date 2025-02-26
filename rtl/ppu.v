@@ -120,7 +120,7 @@ assign mask_ram = (rio_ram_wr | rio_ram_rd) ? mask_rio : {2'b11,~wbm_sel_o};
 assign read_ram = (ram_rd | rio_ram_rd) & wbm_stb_o;
 assign wrte_ram = (ram_wr | rio_ram_wr) & wbm_stb_o;
 //========================================================================================
-spram #(14,16,"../rom/uknc_rom.mif","MIF") rom208 (
+spram #(14,16,"rtl/rom208/uknc_rom.mif","MIF") rom208 (
    .clock   (vm_clk_p),
    .address (wbm_adr_o[14:1]),
 //   .data    (),
@@ -266,7 +266,7 @@ always @(posedge vm_clk_p)
                         ramd_rio       <= wbm_sel_o[0] ? {2{wbm_dat_o[ 7:0]}} : 16'o0;
                         R177012        <= wbm_sel_o[0] ? {2{wbm_dat_o[ 7:0]}} : 16'o0;
                         addr_ram       <= R177010;
-                        mask_rio       <= {2'b11,~R177010[0],R177010[0]};//4'b1100;
+                        mask_rio       <= {2'b11,~R177010[0],R177010[0]};
                         rio_ram_wr     <= 1'b1;
                         ack            <= 1'b0;
                     end else
