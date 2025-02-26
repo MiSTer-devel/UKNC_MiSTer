@@ -13,7 +13,6 @@ set_global_assignment -name VERILOG_FILE rtl/vp1_128fdd.v
 set_global_assignment -name VERILOG_FILE rtl/fdd.v
 set_global_assignment -name VERILOG_FILE rtl/vp1_65.v
 set_global_assignment -name VERILOG_FILE rtl/xm2-01.v
-set_global_assignment -name QIP_FILE rtl/rom208/rom208.qip
 set_global_assignment -name VERILOG_FILE rtl/mkcolorreg.v
 set_global_assignment -name VERILOG_FILE rtl/vm_rst.v
 set_global_assignment -name VERILOG_FILE rtl/keyboard.v

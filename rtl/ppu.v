@@ -120,11 +120,13 @@ assign mask_ram = (rio_ram_wr | rio_ram_rd) ? mask_rio : {2'b11,~wbm_sel_o};
 assign read_ram = (ram_rd | rio_ram_rd) & wbm_stb_o;
 assign wrte_ram = (ram_wr | rio_ram_wr) & wbm_stb_o;
 //========================================================================================
-rom208 d1(
-   .address (wbm_adr_o[14:1]),
+spram #(14,16,"../rom/uknc_rom.mif","MIF") rom208 (
    .clock   (vm_clk_p),
+   .address (wbm_adr_o[14:1]),
+//   .data    (),
+//   .wren    (),
    .q       (prom)
-   );
+);
 //========================================================================================
 vm_reset r1
 (
