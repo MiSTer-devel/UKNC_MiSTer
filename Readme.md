@@ -24,9 +24,9 @@ Keyboard:
 | Win          | ГРАФ           |
 | Caps Lock    | ФИКС           |
 | Numpad ENTER | ВВОД           |
-| ;            | +              |
-| /            | / ?            |
-| ~            | @              |
+| ;            | :              |
+| ~            | ;              |
+| '            | @              |
 
 TODO: 
  - FDD write.
