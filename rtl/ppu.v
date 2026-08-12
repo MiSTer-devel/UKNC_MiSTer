@@ -1,6 +1,7 @@
 module ppu_wb(
     input         vm_clk_p,
     input         vm_clk_n,
+    input         vm_clk_s,
     input         rst,
     input         clk50hz,
 
@@ -18,43 +19,43 @@ module ppu_wb(
 
     input         vm_virq,
 
-    output [16:0] pin_wbm_adr_o,
-    output [15:0] pin_wbm_dat_o,
-    input  [15:0] pin_wbm_dat_i,
-    output        pin_wbm_cyc_o,
-    output        pin_wbm_wre_o,
-    output  [1:0] pin_wbm_sel_o,
-    output        pin_wbm_stb_o,
-    input         pin_wbm_ack_i,
-    input  [15:0] pin_wbi_dat_i,
-    input         pin_wbi_ack_i,
-    output        pin_wbi_stb_o,
+    output [16:0] wbm_adr_o,
+    output [15:0] wbm_dat_o,
+    input  [15:0] wbm_dat_i,
+    output        wbm_cyc_o,
+    output        wbm_we_o,
+    output  [1:0] wbm_sel_o,
+    output        wbm_stb_o,
+    input         wbm_ack_i,
+    input  [15:0] wbi_dat_i,
+    input         wbi_ack_i,
+    output        wbi_stb_o,
 
-    output        pin_tmr_ena_o
+    output        tmr_ena_o,
+
+    output  [2:0] ide_addr,
+    output        ide_read,
+    output        ide_write,
+    input  [15:0] ide_readdata,
+    output [15:0] ide_writedata
 );
 //========================================================================================
 //  Wishbone PPU
 //========================================================================================
-wire        vm_clk_ena  = 1'b0;
-wire        vm_clk_slow = 1'b0;
+wire        vm_clk_ena  = ~vm_clk_s;
+wire        vm_clk_slow = 1'b1;
 
 wire        vm_halt = 1'b0;
 wire        vm_evnt;
 
 wire        wbm_gnt_i = 1'b1;
 wire        wbm_ios_o;
-wire [16:0] wbm_adr_o;
-wire [15:0] wbm_dat_o;
-reg  [15:0] wbm_dat_i;
-wire        wbm_cyc_o;
-wire        wbm_we_o;
-wire [ 1:0] wbm_sel_o;
-wire        wbm_stb_o;
-wire        wbm_ack_i;
+reg  [15:0] wbm_dat_loc;
+wire        wbm_ack_loc;
 
-wire [15:0] wbi_dat_i;
-wire        wbi_ack_i;
-wire        wbi_stb_o;
+wire [15:0] wbi_dat_loc;
+wire        wbi_ack_loc;
+wire        wbi_stb_loc;
 wire        wbi_una_o;
 
 reg         rom;
@@ -68,7 +69,7 @@ reg         ack;
 
 reg  [15:0] data_rio;
 reg  [31:0] ramd_rio;
-reg  [ 3:0] mask_rio;
+reg   [3:0] mask_rio;
 
 
 reg  [15:0] R177010;
@@ -81,52 +82,76 @@ reg  [15:0] R177022;
 reg  [15:0] R177024;
 reg  [15:0] R177026;
 
-reg  [ 9:0] R177054 = 10'o1401;
+reg   [9:0] R177054 = 10'o1401;
 
 wire [31:0] data_reg_out_plan_out;
-wire [ 3:0] io_dqm_out;
+wire  [3:0] io_dqm_out;
 wire [15:0] o177020_out;
 wire [15:0] o177022_out;
 //========================================================================================
 //  Wishbone out
 //========================================================================================
-assign pin_wbm_adr_o = wbm_adr_o;
-assign pin_wbm_dat_o = wbm_dat_o;
-assign pin_wbm_cyc_o = wbm_cyc_o;
-assign pin_wbm_wre_o = wbm_we_o;
-assign pin_wbm_sel_o = wbm_sel_o;
-assign pin_wbm_stb_o = wbm_stb_o;
-assign pin_wbi_stb_o = wbi_una_o ? 1'b0 : wbi_stb_o;
-assign pin_tmr_ena_o = R177054[9];
+assign wbi_stb_o = wbi_una_o ? 1'b0 : wbi_stb_loc;
+assign tmr_ena_o = R177054[9];
 //========================================================================================
 // VIRQ
 //========================================================================================
-assign wbi_dat_i = (wbi_una_o)? 16'o160000 : wbi_stb_o ? pin_wbi_dat_i : 16'o0;
-assign wbi_ack_i = wbi_una_o|pin_wbi_ack_i;
+assign wbi_dat_loc = wbi_una_o ? 16'o160000 : wbi_stb_loc ? wbi_dat_i : 16'o0;
+assign wbi_ack_loc = wbi_una_o | wbi_ack_i;
 //========================================================================================
 
 always @(*)
-    casex({wbm_we_o,pin_wbm_ack_i,rio,ram_rd,rom})
-    'b0_xxx1: wbm_dat_i <= prom;
-    'b0_xx10: wbm_dat_i <= dinp_ram[15:0];
-    'b0_x100: wbm_dat_i <= data_rio;
-    'b0_1000: wbm_dat_i <= pin_wbm_dat_i;
-    default:  wbm_dat_i <= 16'o0;
+    casex({wbm_we_o, wbm_ack_i, rio, ram_rd, ide_read, romcart, rom})
+    'b0xx_xxx1: wbm_dat_loc <= prom;
+    'b0xx_xx10: wbm_dat_loc <= cart_dat;
+    'b0xx_x100: wbm_dat_loc <= (ide_addr == 3'd0) ? ide_readdata : ~ide_readdata;
+    'b0xx_1000: wbm_dat_loc <= dinp_ram[15:0];
+    'b0x1_0000: wbm_dat_loc <= data_rio;
+    'b010_0000: wbm_dat_loc <= wbm_dat_i;
+    default:  wbm_dat_loc <= 16'o0;
     endcase
 
-assign wbm_ack_i = (ack | ackn_ram | pin_wbm_ack_i) & wbm_stb_o;
+assign wbm_ack_loc = (ack | ackn_ram | wbm_ack_i) & wbm_stb_o;
 assign duot_ram = rio_ram_wr ? ramd_rio : {wbm_dat_o,wbm_dat_o};
 assign mask_ram = (rio_ram_wr | rio_ram_rd) ? mask_rio : {2'b11,~wbm_sel_o};
 assign read_ram = (ram_rd | rio_ram_rd) & wbm_stb_o;
 assign wrte_ram = (ram_wr | rio_ram_wr) & wbm_stb_o;
 //========================================================================================
-spram #(14,16,"rtl/rom208/uknc_rom.mif","MIF") rom208 (
+spram #(14,16,"rtl/rom/uknc_rom.mif","MIF") rom208 (
    .clock   (vm_clk_p),
    .address (wbm_adr_o[14:1]),
 //   .data    (),
 //   .wren    (),
    .q       (prom)
 );
+
+//========================================================================================
+// Cartridge
+wire [15:0] cart_dat;
+reg         romcart;
+
+spram #(11,16,"rtl/rom/ide_wdromv0200.mif","MIF") rom_cart (
+//spram #(11,16,"rtl/rom/ide_wdromv0110.mif","MIF") rom_cart (
+//spram #(11,16,"../rom/wddbg2.mif","MIF") rom_cart (
+   .clock   (vm_clk_p),
+   .address (wbm_adr_o[11:1]),
+   .q       (cart_dat)
+);
+//========================================================================================
+// IDE HDD - 110000-110016  CS0 - address revesed (inverted)!
+
+//wire ide_stb = wbm_stb_o & (wbm_adr_o[15:4] == (16'o110000 >> 4));  // IDE HDD
+//reg ide_stb;
+//assign  ide_read      = ~wbm_we_o & ide_stb;
+//assign  ide_write     = wbm_we_o & ide_stb;
+
+assign  ide_addr      = ~wbm_adr_o[3:1];
+assign ide_writedata = (ide_addr == 3'd0) ? wbm_dat_o : ~wbm_dat_o;
+reg  ide_rd;
+reg  ide_wr;
+assign ide_read  = ide_rd & wbm_stb_o;
+assign ide_write = ide_wr & wbm_stb_o;
+
 //========================================================================================
 vm_reset r1
 (
@@ -148,34 +173,34 @@ vm2_wb #(.VM2_CORE_FIX_PREFETCH(0)) ppu
    //    - vm_clk_slow  - clock mode selector, enables clock slowdown simulation,
    //                     the external I/O cycles is launched with rate of vm_clk_ena
    //
-    .vm_clk_p   (   vm_clk_p),  // positive edge clock
-    .vm_clk_n   (   vm_clk_n),  // negative edge clock
-    .vm_clk_ena ( vm_clk_ena),  // slow clock enable
+    .vm_clk_p   (vm_clk_p),     // positive edge clock
+    .vm_clk_n   (vm_clk_n),     // negative edge clock
+    .vm_clk_ena (vm_clk_ena),   // slow clock enable
     .vm_clk_slow(vm_clk_slow),  // slow clock sim mode
                                 //
-    .vm_init    (    vm_init),  // peripheral reset output
-    .vm_dclo    (    vm_dclo),  // processor reset
-    .vm_aclo    (    vm_aclo),  // power fail notificaton
-    .vm_halt    (    vm_halt),  // halt mode interrupt
-    .vm_evnt    (    vm_evnt),  // timer interrupt requests
-    .vm_virq    (    vm_virq),  // vectored interrupt request
+    .vm_init    (vm_init),      // peripheral reset output
+    .vm_dclo    (vm_dclo),      // processor reset
+    .vm_aclo    (vm_aclo),      // power fail notificaton
+    .vm_halt    (vm_halt),      // halt mode interrupt
+    .vm_evnt    (vm_evnt),      // timer interrupt requests
+    .vm_virq    (vm_virq),      // vectored interrupt request
                                 //
                                 // adr MSB is halt mode flag
-    .wbm_gnt_i  (  wbm_gnt_i),  // master wishbone granted
-    .wbm_ios_o  (  wbm_ios_o),  // master wishbone I/O select
-    .wbm_adr_o  (  wbm_adr_o),  // master wishbone address
-    .wbm_dat_o  (  wbm_dat_o),  // master wishbone data output
-    .wbm_dat_i  (  wbm_dat_i),  // master wishbone data input
-    .wbm_cyc_o  (  wbm_cyc_o),  // master wishbone cycle
-    .wbm_we_o   (   wbm_we_o),  // master wishbone direction
-    .wbm_sel_o  (  wbm_sel_o),  // master wishbone byte selection
-    .wbm_stb_o  (  wbm_stb_o),  // master wishbone strobe
-    .wbm_ack_i  (  wbm_ack_i),  // master wishbone acknowledgement
+    .wbm_gnt_i  (wbm_gnt_i),    // master wishbone granted
+    .wbm_ios_o  (wbm_ios_o),    // master wishbone I/O select
+    .wbm_adr_o  (wbm_adr_o),    // master wishbone address
+    .wbm_dat_o  (wbm_dat_o),    // master wishbone data output
+    .wbm_dat_i  (wbm_dat_loc),  // master wishbone data input
+    .wbm_cyc_o  (wbm_cyc_o),    // master wishbone cycle
+    .wbm_we_o   (wbm_we_o),     // master wishbone direction
+    .wbm_sel_o  (wbm_sel_o),    // master wishbone byte selection
+    .wbm_stb_o  (wbm_stb_o),    // master wishbone strobe
+    .wbm_ack_i  (wbm_ack_loc),  // master wishbone acknowledgement
                                 //
-    .wbi_dat_i  (  wbi_dat_i),  // interrupt vector input
-    .wbi_ack_i  (  wbi_ack_i),  // interrupt vector acknowledgement
-    .wbi_stb_o  (  wbi_stb_o),  // interrupt vector strobe
-    .wbi_una_o  (  wbi_una_o)   // unaddressed read access
+    .wbi_dat_i  (wbi_dat_loc),  // interrupt vector input
+    .wbi_ack_i  (wbi_ack_loc),  // interrupt vector acknowledgement
+    .wbi_stb_o  (wbi_stb_loc),  // interrupt vector strobe
+    .wbi_una_o  (wbi_una_o)     // unaddressed read access
 );
 
 reg wbm_stb_o_old = 0;
@@ -184,6 +209,9 @@ reg read_177124 = 0;
 always @(posedge vm_clk_p)
     if(vm_init)begin
         rom <= 1'b0;
+        romcart <= 1'b0;
+        ide_rd <= 1'b0;
+        ide_wr <= 1'b0;
         ram_wr <= 1'b0;
         ram_rd <= 1'b0;
         rio <= 1'b0;
@@ -199,6 +227,9 @@ always @(posedge vm_clk_p)
         wbm_stb_o_old <= wbm_stb_o;
         if(!wbm_stb_o)begin
             rom <= 1'b0;
+            romcart <= 1'b0;
+            ide_rd <= 1'b0;
+            ide_wr <= 1'b0;
             ram_wr <= 1'b0;
             ram_rd <= 1'b0;
             rio <= 1'b0;
@@ -212,6 +243,9 @@ always @(posedge vm_clk_p)
             if(wbm_adr_o[15:9] < 'o100)begin
                 addr_ram <= wbm_adr_o[15:0];
                 rom      <= 1'b0;
+                romcart <= 1'b0;
+                ide_rd  <= 1'b0;
+                ide_wr  <= 1'b0;
                 rio      <= 1'b0;
                 ack      <= 1'b0;
                 ram_wr   <= wbm_we_o;
@@ -220,9 +254,18 @@ always @(posedge vm_clk_p)
             if(wbm_adr_o[15:9] < 'o120)begin
                 addr_ram <= wbm_adr_o[15:0];
                 rom      <= R177054[0];
-                ram_wr   <= wbm_we_o;
-                ram_rd   <=~(R177054[0]|wbm_we_o) & R177054[4];
-                ack      <=~wbm_we_o & R177054[0];
+                if (R177054[3:0] == 4'h2) begin
+//                   romcart <= 1'b1;
+                   romcart <= ~wbm_adr_o[12];
+                   ide_rd <= ~wbm_we_o & (wbm_adr_o[12:4] == 9'b1_0000_0000);
+                   ide_wr <=  wbm_we_o & (wbm_adr_o[12:4] == 9'b1_0000_0000);
+                   ack <= 1'b1;
+                end
+                else begin
+                   ram_wr   <= wbm_we_o;
+                   ram_rd   <=~(R177054[0]|wbm_we_o) & R177054[4];
+                   ack      <=~wbm_we_o & R177054[0];
+                end
                 rio      <= 1'b0;
             end else
             if(wbm_adr_o[15:9] < 'o140)begin
@@ -250,21 +293,24 @@ always @(posedge vm_clk_p)
                 rio      <= 1'b0;
             end else begin
                 rom <= 1'b0;
+                romcart <= 1'b0;
+                ide_rd <= 1'b0;
+                ide_wr <= 1'b0;
                 ram_wr <= 1'b0;
                 ram_rd <= 1'b0;
                 if(wbm_we_o)begin
                     if(wbm_adr_o[8:1] == 'o4)begin
                         addr_ram[15:8] <= wbm_sel_o[1] ? wbm_dat_o[15:8] : 8'o0;
-                        addr_ram[ 7:0] <= wbm_sel_o[0] ? wbm_dat_o[ 7:0] : 8'o0;
+                        addr_ram[7:0]  <= wbm_sel_o[0] ? wbm_dat_o[7:0]  : 8'o0;
                         R177010[15:8]  <= wbm_sel_o[1] ? wbm_dat_o[15:8] : 8'o0;
-                        R177010[ 7:0]  <= wbm_sel_o[0] ? wbm_dat_o[ 7:0] : 8'o0;
+                        R177010[ 7:0]  <= wbm_sel_o[0] ? wbm_dat_o[7:0]  : 8'o0;
                         rio_ram_rd     <= 1'b1;
                         mask_rio       <= 4'b0000;
                         ack            <= 1'b0;
                     end else
                     if(wbm_adr_o[8:1] == 'o5)begin 
-                        ramd_rio       <= wbm_sel_o[0] ? {2{wbm_dat_o[ 7:0]}} : 16'o0;
-                        R177012        <= wbm_sel_o[0] ? {2{wbm_dat_o[ 7:0]}} : 16'o0;
+                        ramd_rio       <= wbm_sel_o[0] ? {2{wbm_dat_o[7:0]}} : 16'o0;
+                        R177012        <= wbm_sel_o[0] ? {2{wbm_dat_o[7:0]}} : 16'o0;
                         addr_ram       <= R177010;
                         mask_rio       <= {2'b11,~R177010[0],R177010[0]};
                         rio_ram_wr     <= 1'b1;
@@ -272,9 +318,9 @@ always @(posedge vm_clk_p)
                     end else
                     if(wbm_adr_o[8:1] == 'o6)begin
                         ramd_rio[31:24]<= wbm_sel_o[1] ? wbm_dat_o[15:8] : R177014[15:8];
-                        ramd_rio[23:16]<= wbm_sel_o[0] ? wbm_dat_o[ 7:0] : R177014[ 7:0];
+                        ramd_rio[23:16]<= wbm_sel_o[0] ? wbm_dat_o[7:0]  : R177014[7:0];
                         R177014[15:8]  <= wbm_sel_o[1] ? wbm_dat_o[15:8] : R177014[15:8];
-                        R177014[ 7:0]  <= wbm_sel_o[0] ? wbm_dat_o[ 7:0] : R177014[ 7:0];
+                        R177014[7:0]   <= wbm_sel_o[0] ? wbm_dat_o[7:0]  : R177014[7:0];
                         addr_ram       <= R177010;
                         mask_rio       <= 4'b0011;
                         rio_ram_wr     <= 1'b1;
@@ -286,12 +332,12 @@ always @(posedge vm_clk_p)
                     end else
                     if(wbm_adr_o[8:1] == 'o10)begin
                         R177020[15:8] <= wbm_sel_o[1] ? wbm_dat_o[15:8] : 8'o0;
-                        R177020[ 7:0] <= wbm_sel_o[0] ? wbm_dat_o[ 7:0] : 8'o0;
+                        R177020[7:0]  <= wbm_sel_o[0] ? wbm_dat_o[7:0]  : 8'o0;
                         ack <= 1'b1;
                     end else
                     if(wbm_adr_o[8:1] == 'o11)begin
                         R177022[15:8] <= wbm_sel_o[1] ? wbm_dat_o[15:8] : 8'o0;
-                        R177022[ 7:0] <= wbm_sel_o[0] ? wbm_dat_o[ 7:0] : 8'o0;
+                        R177022[7:0]  <= wbm_sel_o[0] ? wbm_dat_o[7:0]  : 8'o0;
                         ack <= 1'b1;
                     end else
                     if(wbm_adr_o[8:1] == 'o12)begin // 0177024
@@ -320,14 +366,14 @@ always @(posedge vm_clk_p)
                     end
 
                 end else begin
-// read read read read read read read read read read read read read read read read read read read read
+// read
                     if(wbm_adr_o[8:1] == 'o4)begin
                         data_rio   <= R177010;
                         ack        <= 1'b1;
                         rio        <= 1'b1;
                     end else
                     if(wbm_adr_o[8:1] == 'o5)begin
-                        data_rio   <= R177010[0] ?  R177012[15:8] : R177012[ 7:0];
+                        data_rio   <= R177010[0] ? R177012[15:8] : R177012[7:0];
                         ack        <= 1'b1;
                         rio        <= 1'b1;
                     end else
@@ -406,8 +452,8 @@ mkcolorg mc1(
 );
 
 rd_plan mc2(
-   .dinp_ram   (   dinp_ram),
-   .addr        ( R177010[0]),
+   .dinp_ram    (dinp_ram),
+   .addr        (R177010[0]),
    .o177020_out (o177020_out),
    .o177022_out (o177022_out)
 );

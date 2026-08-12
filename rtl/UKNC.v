@@ -36,7 +36,13 @@ module UKNC (
    output  [7:0] sd_buff_din,
    input         sd_buff_wr,
    input   [3:0] img_mounted,
-   input  [19:0] img_size
+   input  [19:0] img_size,
+
+   output  [2:0] ide_addr,
+   output        ide_read,
+   output        ide_write,
+   input  [15:0] ide_readdata,
+   output [15:0] ide_writedata
 );
 
 reg ce_12_5, ce_12_5n, ce_6_25, ce_6_25n;
@@ -54,6 +60,7 @@ wire cpuclk_p = ce_12_5  & clk_25;
 wire cpuclk_n = ce_12_5n & clk_25;
 wire ppuclk_p = ce_6_25  & clk_25;
 wire ppuclk_n = ce_6_25n & clk_25;
+wire stop_cpu;
 
 //------------------------------------------------------------//
 reg  [23:0]count_rst = 0;
@@ -169,6 +176,7 @@ wire        cpu_wbi_ack_i_vp;
 ppu_wb ppu1(
    .vm_clk_p    (ppuclk_p),
    .vm_clk_n    (ppuclk_n),
+   .vm_clk_s    (stop_cpu),
    .rst         (~sys_rst),
    .clk50hz     (vsync),
 
@@ -186,19 +194,25 @@ ppu_wb ppu1(
 
    .vm_virq     (ppu_vm_virq_i),
 
-   .pin_wbm_adr_o   (ppu_wbm_adr_o),
-   .pin_wbm_dat_o   (ppu_wbm_dat_o),
-   .pin_wbm_dat_i   (ppu_wbm_dat_i),
-   .pin_wbm_cyc_o   (ppu_wbm_cyc_o),
-   .pin_wbm_wre_o   (ppu_wbm_wre_o),
-   .pin_wbm_sel_o   (ppu_wbm_sel_o),
-   .pin_wbm_stb_o   (ppu_wbm_stb_o),
-   .pin_wbm_ack_i   (ppu_wbm_ack_i),
-   .pin_wbi_dat_i   (ppu_wbi_dat_i),
-   .pin_wbi_ack_i   (ppu_wbi_ack_i),
-   .pin_wbi_stb_o   (ppu_wbi_stb_o),
+   .wbm_adr_o   (ppu_wbm_adr_o),
+   .wbm_dat_o   (ppu_wbm_dat_o),
+   .wbm_dat_i   (ppu_wbm_dat_i),
+   .wbm_cyc_o   (ppu_wbm_cyc_o),
+   .wbm_we_o    (ppu_wbm_wre_o),
+   .wbm_sel_o   (ppu_wbm_sel_o),
+   .wbm_stb_o   (ppu_wbm_stb_o),
+   .wbm_ack_i   (ppu_wbm_ack_i),
+   .wbi_dat_i   (ppu_wbi_dat_i),
+   .wbi_ack_i   (ppu_wbi_ack_i),
+   .wbi_stb_o   (ppu_wbi_stb_o),
 
-   .pin_tmr_ena_o   (pin_tmr_ena_o)
+   .tmr_ena_o   (pin_tmr_ena_o),
+
+   .ide_addr    (ide_addr),
+   .ide_read    (ide_read),
+   .ide_write   (ide_write),
+   .ide_readdata (ide_readdata),
+   .ide_writedata (ide_writedata)
 );
 //------------------------------------------------------------//
 wire  [7:0] keycode;

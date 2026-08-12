@@ -204,9 +204,10 @@ localparam CONF_STR = {
 	"-;",
 	"S0,DSK,Mount Drive 1;",
 	"S1,DSK,Mount Drive 2;",
-	"S2,DSK,Mount Drive 3;",
-	"S3,DSK,Mount Drive 4;",
-//	"S2,VHD,Mount Drive;",
+	"S2,VHD,Mount Drive;",
+//	"S2,DSK,Mount Drive 3;",
+//	"S3,DSK,Mount Drive 4;",
+//	"S4,VHD,Mount Drive;",
 	"-;",
 	"O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"O[10:8],Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
@@ -225,27 +226,35 @@ wire [64:0] rtc;
 wire [21:0] gamma_bus;
 
 wire [31:0] sd_lba_sd;
-wire [31:0] sd_lba[4] = '{sd_lba_sd,sd_lba_sd,sd_lba_sd,sd_lba_sd};
+/*wire [31:0] sd_lba[4] = '{sd_lba_sd,sd_lba_sd,sd_lba_sd,sd_lba_sd};
 wire  [3:0] sd_rd;
 wire  [3:0] sd_wr;
-wire  [3:0] sd_ack;
+wire  [3:0] sd_ack; */
+wire [31:0] sd_lba[2] = '{sd_lba_sd,sd_lba_sd};
+wire  [1:0] sd_rd;
+wire  [1:0] sd_wr;
+wire  [1:0] sd_ack;
 wire        sd_ack_conf;
 wire  [8:0] sd_buff_addr;   // [7:0] for 16bit BUS WIDE, [8:0] for 8bit BUS WIDE
 wire  [7:0] sd_buff_dout;   // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
 wire  [7:0] sd_buff_din_sd; // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
-wire  [7:0] sd_buff_din[4] = '{sd_buff_din_sd,sd_buff_din_sd,sd_buff_din_sd,sd_buff_din_sd}; // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
+//wire  [7:0] sd_buff_din[4] = '{sd_buff_din_sd,sd_buff_din_sd,sd_buff_din_sd,sd_buff_din_sd}; // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
+wire  [7:0] sd_buff_din[2] = '{sd_buff_din_sd,sd_buff_din_sd}; // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
 wire        sd_buff_wr;
 
-wire  [3:0] img_mounted;
+//wire  [3:0] img_mounted;
+wire  [2:0] img_mounted;
 wire        img_readonly;
 wire [63:0] img_size;
 
 wire  [7:0] uart_mode;
 
-hps_io #(.CONF_STR(CONF_STR), .PS2DIV(14'd2000), .VDNUM(4), .WIDE(0)) hps_io   //50MHz // .PS2DIV(3200)   //100MHz
+//hps_io #(.CONF_STR(CONF_STR), .PS2DIV(14'd2000), .VDNUM(4), .WIDE(0)) hps_io   //50MHz // .PS2DIV(3200)   //100MHz
+hps_io #(.CONF_STR(CONF_STR), .PS2DIV(14'd2000), .VDNUM(2), .WIDE(0)) hps_io   //50MHz // .PS2DIV(3200)   //100MHz
 (
 	.clk_sys      (CLK_50M),
 	.HPS_BUS      (HPS_BUS),
+	.EXT_BUS      (EXT_BUS),
 	.gamma_bus    (gamma_bus),
 
 	.forced_scandoubler (forced_scandoubler),
@@ -274,15 +283,39 @@ hps_io #(.CONF_STR(CONF_STR), .PS2DIV(14'd2000), .VDNUM(4), .WIDE(0)) hps_io   /
 	.uart_mode    (uart_mode)
 );
 
+wire [15:0] mgmt_din;
+wire [15:0] mgmt_dout;
+wire [15:0] mgmt_addr;
+wire        mgmt_rd;
+wire        mgmt_wr;
+wire  [2:0] mgmt_req;
+
+wire [35:0] EXT_BUS;
+
+hps_ext hps_ext (
+	.clk_sys      (CLK_50M),
+	.EXT_BUS      (EXT_BUS),
+
+	.ext_din      (mgmt_din),
+	.ext_dout     (mgmt_dout),
+	.ext_addr     (mgmt_addr),
+	.ext_rd       (mgmt_rd),
+	.ext_wr       (mgmt_wr),
+
+	.ext_req      (mgmt_req),
+	.ext_hotswap  (2'b00)
+);
+
+
 //************************************************
 //* PLL Clocks
 //************************************************
 wire clk_50, clk_25;
 pll pll (
-   .refclk   (CLK_50M),
-   .rst      (0),
-   .outclk_0 (clk_50),
-   .outclk_1 (clk_25)
+	.refclk   (CLK_50M),
+	.rst      (0),
+	.outclk_0 (clk_50),
+	.outclk_1 (clk_25)
 );
 
 
@@ -293,46 +326,54 @@ assign AUDIO_R = {15{audio}};
 assign AUDIO_L = AUDIO_R;
 
 UKNC UKNC (
-   .clk_25   (clk_25),
+	.clk_25        (clk_25),
 
-   .ps2_key  (ps2_key),
-   .nbut     (~reset_key),
-   .uart_rx  (UART_RXD),
-   .uart_tx  (UART_TXD),
-   .sound    (audio),
-//   .rtc      (rtc),
-//   .msxmouse (msxmouse),
-//   .msxstb   (msxstb),
+	.nbut          (~reset_key),
+	.sound         (audio),
+//	.rtc           (rtc),
+//	.msxmouse      (msxmouse),
+//	.msxstb        (msxstb),
 
-   .sd_lba        (sd_lba_sd),
-   .sd_rd         (sd_rd),
-   .sd_wr         (sd_wr),
-   .sd_ack        (|sd_ack),
-   .sd_buff_addr  (sd_buff_addr),
-   .sd_buff_dout  (sd_buff_dout),
-   .sd_buff_din   (sd_buff_din_sd),
-   .sd_buff_wr    (sd_buff_wr),
-   .img_mounted   (img_mounted),   //[2:1]),
-   .img_size      (img_size[19:0]),
-//  .img_wp        (0),
+	.vsync         (VSync),
 
-   .vsync(VSync),
+	.addr_cpu_o    (addr_cpu_o),
+	.data_cpu_i    (data_cpu_i),
+	.data_cpu_o    (data_cpu_o),
+	.mask_cpu_o    (mask_cpu_o),
+	.read_cpu_o    (read_cpu_o),
+	.wrte_cpu_o    (wrte_cpu_o),
+	.ackn_cpu_i    (ackn_cpu_i),
 
-   .addr_cpu_o(addr_cpu_o),
-   .data_cpu_i(data_cpu_i),
-   .data_cpu_o(data_cpu_o),
-   .mask_cpu_o(mask_cpu_o),
-   .read_cpu_o(read_cpu_o),
-   .wrte_cpu_o(wrte_cpu_o),
-   .ackn_cpu_i(ackn_cpu_i),
+	.addr_ppu_o    (addr_ppu_o),
+	.data_ppu_i    (data_ppu_i),
+	.data_ppu_o    (data_ppu_o),
+	.mask_ppu_o    (mask_ppu_o),
+	.read_ppu_o    (read_ppu_o),
+	.wrte_ppu_o    (wrte_ppu_o),
+	.ackn_ppu_i    (ackn_ppu_i),
 
-   .addr_ppu_o(addr_ppu_o),
-   .data_ppu_i(data_ppu_i),
-   .data_ppu_o(data_ppu_o),
-   .mask_ppu_o(mask_ppu_o),
-   .read_ppu_o(read_ppu_o),
-   .wrte_ppu_o(wrte_ppu_o),
-   .ackn_ppu_i(ackn_ppu_i)
+	.ps2_key       (ps2_key),
+
+	.uart_rx       (UART_RXD),
+	.uart_tx       (UART_TXD),
+
+	.sd_lba        (sd_lba_sd),
+	.sd_rd         (sd_rd),
+	.sd_wr         (sd_wr),
+	.sd_ack        (|sd_ack),
+	.sd_buff_addr  (sd_buff_addr),
+	.sd_buff_dout  (sd_buff_dout),
+	.sd_buff_din   (sd_buff_din_sd),
+	.sd_buff_wr    (sd_buff_wr),
+	.img_mounted   (img_mounted),   //[2:1]),
+	.img_size      (img_size[19:0]),
+//	.img_wp        (0),
+
+	.ide_addr      (ide_addr),
+	.ide_read      (ide_read),
+	.ide_write     (ide_write),
+	.ide_readdata  (ide_readdata),
+	.ide_writedata (ide_writedata)
 );
 
 
@@ -359,28 +400,28 @@ wire        HSync,VSync;
 
 ram ram
 (
-   .clk        (clk_25),
+	.clk        (clk_25),
 
 	.cycle      (cycle),
 	.scr_addr   (scr_addr),
 	.scr_data1  (scr_data1),
 	.scr_data2  (scr_data2),
 
-   .cpu_addr   (addr_cpu_o),
-   .cpu_dout   (data_cpu_i),
-   .cpu_din    (data_cpu_o),
-   .cpu_dqm    (mask_cpu_o),
-   .cpu_read   (read_cpu_o),
-   .cpu_wrte   (wrte_cpu_o),
-   .cpu_ack    (ackn_cpu_i),
+	.cpu_addr   (addr_cpu_o),
+	.cpu_dout   (data_cpu_i),
+	.cpu_din    (data_cpu_o),
+	.cpu_dqm    (mask_cpu_o),
+	.cpu_read   (read_cpu_o),
+	.cpu_wrte   (wrte_cpu_o),
+	.cpu_ack    (ackn_cpu_i),
 
-   .ppu_addr   (addr_ppu_o),
-   .ppu_dout   (data_ppu_i),
-   .ppu_din    (data_ppu_o),
-   .ppu_dqm    (mask_ppu_o),
-   .ppu_read   (read_ppu_o),
-   .ppu_wrte   (wrte_ppu_o),
-   .ppu_ack    (ackn_ppu_i)
+	.ppu_addr   (addr_ppu_o),
+	.ppu_dout   (data_ppu_i),
+	.ppu_din    (data_ppu_o),
+	.ppu_dqm    (mask_ppu_o),
+	.ppu_read   (read_ppu_o),
+	.ppu_wrte   (wrte_ppu_o),
+	.ppu_ack    (ackn_ppu_i)
 );
 
 wire  [3:0] cycle;
@@ -390,21 +431,21 @@ wire [15:0] scr_data2;
 
 video video
 (
-   .clk        (clk_25),
+	.clk        (clk_25),
 
-   .ce_pix     (ce_pix),
-   .hsync      (HSync),
-   .vsync      (VSync),
-   .hblank     (HBlank),
-   .vblank     (VBlank),
-   .red        (r),
-   .green      (g),
-   .blue       (b),
+	.ce_pix     (ce_pix),
+	.hsync      (HSync),
+	.vsync      (VSync),
+	.hblank     (HBlank),
+	.vblank     (VBlank),
+	.red        (r),
+	.green      (g),
+	.blue       (b),
 
-   .cycle      (cycle),
-   .addr_scr   (scr_addr),
-   .data1      (scr_data1),
-   .data2      (scr_data2)
+	.cycle      (cycle),
+	.addr_scr   (scr_addr),
+	.data1      (scr_data1),
+	.data2      (scr_data2)
 );
 
 assign CLK_VIDEO = clk_50;
@@ -431,20 +472,94 @@ video_mixer #(.LINE_LENGTH(650), .GAMMA(1)) video_mixer
 );
 
 
-//-----------------------
+//-----------------------------------------------------
 wire        reset_key;
 assign      reset_key = RESET | buttons[1] | status[0];
+
+//-----------------------------------------------------
+//
+// IDE
+//
+logic           mgmt_ide0_cs;
+/*logic [15:0]    mgmt_ide0_readdata;
+logic           ide0_command_cs;
+logic           ide0_control_cs;
+logic           ide0_comd_ctrl_select;
+logic           ide0_io_read;
+logic           ide0_io_read_1;
+logic           ide0_io_write;
+logic           prev_ide0_io_read;
+logic           prev_ide0_io_write;
+logic [3:0]     ide0_address_1;
+logic [15:0]    ide0_writedata;
+*/ 
+logic [2:0]     ide_addr;
+logic [15:0]    ide_writedata;
+logic [15:0]    ide_readdata;
+logic           ide_read;
+logic           ide_write;
+
+assign mgmt_ide0_cs     = (mgmt_addr[15:8] == 8'hF0);
+/*assign ide0_command_cs  = ~ide0_cs1fx;
+assign ide0_control_cs  = ~ide0_cs3fx & &ide0_address[2:1];
+assign ide0_io_read     = ~ide0_io_read_n  & (ide0_command_cs | ide0_control_cs);
+assign ide0_io_write    = ~ide0_io_write_n & (ide0_command_cs | ide0_control_cs);
+
+always_ff @(posedge clk32p)
+begin
+	ide0_io_read_1          <= ide0_io_read;
+	prev_ide0_io_read       <= ide0_io_read_1;
+	prev_ide0_io_write      <= ide0_io_write;
+	ide0_address_1          <= {1'b0, ide_address};
+	ide0_writedata          <= ide0_data_bus_out;
+end */
+/*  ao486
+assign mgmt_ide0_cs  = (mgmt_addr[15:8] == 8'hF0);
+assign mgmt_ide1_cs  = (mgmt_addr[15:8] == 8'hF1);
+assign mgmt_fdd_cs   = (mgmt_addr[15:8] == 8'hF2);
+assign mgmt_rtc_cs   = (mgmt_addr[15:8] == 8'hF4);
+assign mgmt_readdata = mgmt_ide0_cs ? mgmt_ide0_readdata : mgmt_ide1_cs ? mgmt_ide1_readdata : mgmt_fdd_readdata;
+*/
+
+ide ide (
+	.clk           (clk_50),
+	.rst_n         (~reset_key),
+
+//	.irq           (),
+//	.drq           (),
+
+	.use_fast      (0),
+//	.no_data       (),
+
+//	.drive_en      (),
+
+	.io_address    ({1'b0,ide_addr}),
+	.io_read       (ide_read),
+	.io_readdata   (ide_readdata),
+	.io_write      (ide_write),
+	.io_writedata  (ide_writedata),
+	.io_32         (0),
+
+//	.io_wait       (),
+
+	.request       (mgmt_req),
+	.mgmt_address  (mgmt_addr[3:0]),
+	.mgmt_writedata (mgmt_dout),
+	.mgmt_readdata (mgmt_din),
+	.mgmt_write    (mgmt_wr & mgmt_ide0_cs),
+	.mgmt_read     (mgmt_rd & mgmt_ide0_cs)
+);
 
 //--- Mouse --------------
 /*wire  [5:0] msxmouse;
 wire        msxstb;
 
 ps2mouse msx_mouse (
-   .clk          (clk_25),
-   .reset        (reset_key),
-   .strobe       (msxstb),
-   .data         (msxmouse),
-   .ps2_mouse    (ps2_mouse)
+	.clk          (clk_25),
+	.reset        (reset_key),
+	.strobe       (msxstb),
+	.data         (msxmouse),
+	.ps2_mouse    (ps2_mouse)
 );
 */
 endmodule
