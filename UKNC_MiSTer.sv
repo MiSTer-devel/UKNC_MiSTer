@@ -209,11 +209,14 @@ localparam CONF_STR = {
 //	"S3,DSK,Mount Drive 4;",
 //	"S4,VHD,Mount Drive;",
 	"-;",
+	"O[11],CPU Speed ,Normal,Turbo;",
+	"O[12],Palette ,GRB,RGB;",
+
 	"O[122:121],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"O[10:8],Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"-;",
 	"-;",
-	"R[0],Reset and close OSD;",
+	"R[0],Reset and apply HDD;",
 	"V,v",`BUILD_DATE 
 };
 
@@ -261,7 +264,7 @@ hps_io #(.CONF_STR(CONF_STR), .PS2DIV(14'd2000), .VDNUM(2), .WIDE(0)) hps_io   /
 
 	.buttons      (buttons),
 	.status       (status),
-	.status_menumask ({status[5]}),
+	.status_menumask ({status[11]}),
 
 	.ps2_key      (ps2_key),
 	.ps2_mouse    (ps2_mouse),
@@ -321,9 +324,12 @@ pll pll (
 
 ///////////
 wire        audio;
-wire  [6:0] mouse;
-assign AUDIO_R = {15{audio}};
-assign AUDIO_L = AUDIO_R;
+wire  [9:0] audio_left;
+wire  [9:0] audio_right;
+//assign AUDIO_R = {15{audio}};
+//assign AUDIO_L = AUDIO_R;
+assign AUDIO_L = {audio_left,  6'd0};
+assign AUDIO_R = {audio_right, 6'd0};
 
 UKNC UKNC (
 	.clk_25        (clk_25),
@@ -331,8 +337,6 @@ UKNC UKNC (
 	.nbut          (~reset_key),
 	.sound         (audio),
 //	.rtc           (rtc),
-//	.msxmouse      (msxmouse),
-//	.msxstb        (msxstb),
 
 	.vsync         (VSync),
 
@@ -352,7 +356,11 @@ UKNC UKNC (
 	.wrte_ppu_o    (wrte_ppu_o),
 	.ackn_ppu_i    (ackn_ppu_i),
 
+	.speed         (~status[11]),
 	.ps2_key       (ps2_key),
+	.mouse         ({ps2_mouse[5],ps2_mouse[21:16], ps2_mouse[0], ps2_mouse[4],ps2_mouse[13:8], ps2_mouse[1]}),
+	.audio_left    (audio_left),
+	.audio_right   (audio_right),
 
 	.uart_rx       (UART_RXD),
 	.uart_tx       (UART_TXD),
@@ -466,8 +474,8 @@ video_mixer #(.LINE_LENGTH(650), .GAMMA(1)) video_mixer
 	.hq2x         (scale==1),
 	.freeze_sync  (),
 	
-	.R({r,r,r[2:1]}),
-	.G({g,g,g[2:1]}),
+	.R(status[12] ? {r,r,r[2:1]} : {g,g,g[2:1]}),
+	.G(status[12] ? {g,g,g[2:1]} : {r,r,r[2:1]}),
 	.B({b,b,b[2:1]})
 );
 
@@ -505,13 +513,12 @@ assign ide0_control_cs  = ~ide0_cs3fx & &ide0_address[2:1];
 assign ide0_io_read     = ~ide0_io_read_n  & (ide0_command_cs | ide0_control_cs);
 assign ide0_io_write    = ~ide0_io_write_n & (ide0_command_cs | ide0_control_cs);
 
-always_ff @(posedge clk32p)
+always_ff @(posedge clk_50)
 begin
 	ide0_io_read_1          <= ide0_io_read;
 	prev_ide0_io_read       <= ide0_io_read_1;
 	prev_ide0_io_write      <= ide0_io_write;
 	ide0_address_1          <= {1'b0, ide_address};
-	ide0_writedata          <= ide0_data_bus_out;
 end */
 /*  ao486
 assign mgmt_ide0_cs  = (mgmt_addr[15:8] == 8'hF0);
@@ -550,16 +557,4 @@ ide ide (
 	.mgmt_read     (mgmt_rd & mgmt_ide0_cs)
 );
 
-//--- Mouse --------------
-/*wire  [5:0] msxmouse;
-wire        msxstb;
-
-ps2mouse msx_mouse (
-	.clk          (clk_25),
-	.reset        (reset_key),
-	.strobe       (msxstb),
-	.data         (msxmouse),
-	.ps2_mouse    (ps2_mouse)
-);
-*/
 endmodule

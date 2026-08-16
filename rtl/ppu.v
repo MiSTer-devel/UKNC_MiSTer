@@ -1,7 +1,7 @@
 module ppu_wb(
     input         vm_clk_p,
     input         vm_clk_n,
-    input         vm_clk_s,
+    input         vm_clk_slow,
     input         rst,
     input         clk50hz,
 
@@ -32,6 +32,7 @@ module ppu_wb(
     output        wbi_stb_o,
 
     output        tmr_ena_o,
+    input  [15:0] mouse,
 
     output  [2:0] ide_addr,
     output        ide_read,
@@ -42,8 +43,6 @@ module ppu_wb(
 //========================================================================================
 //  Wishbone PPU
 //========================================================================================
-wire        vm_clk_ena  = ~vm_clk_s;
-wire        vm_clk_slow = 1'b1;
 
 wire        vm_halt = 1'b0;
 wire        vm_evnt;
@@ -162,6 +161,15 @@ vm_reset r1
 );
 //========================================================================================
 assign vm_evnt = R177054[8] | clk50hz;
+//========================================================================================
+reg [2:0] cpudelay;
+
+always @ (posedge vm_clk_p) begin
+   if (cpudelay != 3'd2) cpudelay <= cpudelay + 1'b1;  // считаем от 0 до 3
+   else cpudelay <= 3'd0;
+end
+wire vm_clk_ena = cpudelay == 3'd2;
+
 //========================================================================================
 vm2_wb #(.VM2_CORE_FIX_PREFETCH(0)) ppu
 (
@@ -426,6 +434,11 @@ always @(posedge vm_clk_p)
                         ack        <= 1'b1;
                         rio        <= 1'b1;
                     end else*/
+                    if(wbm_adr_o[8:1] == 'o200)begin   // 177400
+                        data_rio   <= mouse;
+                        ack        <= 1'b1;
+                        rio        <= 1'b1;
+                    end else
                     begin
                         //ack       <= 1'b1;
                     end

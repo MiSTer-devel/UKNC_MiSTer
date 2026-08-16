@@ -207,7 +207,7 @@ always @(posedge pin_vm_clk_p) begin
             if(setVIRQtm && enVIRQtm)begin pin_wbi_dat_o <= 16'o304; enVIRQtm <= 1'b0; pin_wbi_ack_o <= 1'b1; end
             else if(setVIRQbt && enVIRQbt)begin pin_wbi_dat_o <= 16'o300; enVIRQbt <= 1'b0; pin_wbi_ack_o <= 1'b1; end
         end
-		  
+
         if(R177702!=but_data && |but_data) begin
            press_btn <= 1'b1;
            R177702 <= but_data;

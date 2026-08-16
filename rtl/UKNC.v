@@ -22,7 +22,11 @@ module UKNC (
    input  [31:0] data_ppu_i,
    input         ackn_ppu_i,
 
+   input         speed,
    input  [10:0] ps2_key,
+   input  [15:0] mouse,
+   output [10:0] audio_left,
+   output [10:0] audio_right,
 
    output        uart_tx,
    input         uart_rx,
@@ -119,13 +123,19 @@ wire [15:0] ppu_wbi_dat_i_xm2;
 wire        ppu_wbi_ack_i_xm2;
 wire        ppu_wbi_stb_o_xm2;
 
+//aberrant
+wire [15:0]ppu_wbm_dat_i_abr;
+wire       ppu_wbm_ack_i_abr;
+ 
+
 assign ppu_vm_virq_i = ppu_vm_virq_i_xm2 | ppu_vm_virq_i_vp;
 
 assign ppu_wbm_dat_i = ppu_wbm_ack_i_xm2 ? ppu_wbm_dat_i_xm2 :
                        ppu_wbm_ack_i_vp  ? ppu_wbm_dat_i_vp  :
-                       ppu_wbm_ack_i_128 ? ppu_wbm_dat_i_128 : 16'o0;
+                       ppu_wbm_ack_i_128 ? ppu_wbm_dat_i_128 :
+                       ppu_wbm_ack_i_abr ? ppu_wbm_dat_i_abr : 16'o0;
 
-assign ppu_wbm_ack_i = ppu_wbm_ack_i_xm2 | ppu_wbm_ack_i_vp|ppu_wbm_ack_i_128;
+assign ppu_wbm_ack_i = ppu_wbm_ack_i_xm2 | ppu_wbm_ack_i_vp | ppu_wbm_ack_i_128 | ppu_wbm_ack_i_abr;
 
 assign ppu_wbi_dat_i = ppu_wbi_ack_i_xm2 ? ppu_wbi_dat_i_xm2 :
                        ppu_wbi_ack_i_vp  ? ppu_wbi_dat_i_vp  : 16'o0;
@@ -176,7 +186,7 @@ wire        cpu_wbi_ack_i_vp;
 ppu_wb ppu1(
    .vm_clk_p    (ppuclk_p),
    .vm_clk_n    (ppuclk_n),
-   .vm_clk_s    (stop_cpu),
+   .vm_clk_slow (speed),
    .rst         (~sys_rst),
    .clk50hz     (vsync),
 
@@ -207,6 +217,7 @@ ppu_wb ppu1(
    .wbi_stb_o   (ppu_wbi_stb_o),
 
    .tmr_ena_o   (pin_tmr_ena_o),
+   .mouse       (mouse),
 
    .ide_addr    (ide_addr),
    .ide_read    (ide_read),
@@ -258,19 +269,19 @@ keyboard keyboard(
 
 //--------------------------------------------
 wire [15:0] disk_data_out;
-wire [15:0] disk_data_in ;
-wire [ 1:0] disk_drive   ;
-wire        disk_valid   ;
-wire        disk_sync    ;
-wire        disk_crc_ok  ;
-wire        disk_rdy     ;
-wire        disk_tr0     ;
-wire        disk_ind     ;
-wire        disk_motor   ;
-wire        disk_step    ;
-wire        disk_dir     ;
-wire        disk_head    ;
-wire        disk_write   ;
+wire [15:0] disk_data_in;
+wire [ 1:0] disk_drive;
+wire        disk_valid;
+wire        disk_sync;
+wire        disk_crc_ok;
+wire        disk_rdy;
+wire        disk_tr0;
+wire        disk_ind;
+wire        disk_motor;
+wire        disk_step;
+wire        disk_dir;
+wire        disk_head;
+wire        disk_write;
 
 fdd fdd(
    .clk_25       ( clk_25 ),
@@ -308,40 +319,61 @@ fdd fdd(
 );
 
 vp1_128fdd vp128(
-    .ppu_vm_clk_p ( ppuclk_p ),
+   .ppu_vm_clk_p  ( ppuclk_p ),
 
-    .ppu_vm_init_i( ppu_vm_init_o ),
+   .ppu_vm_init_i ( ppu_vm_init_o ),
 
-    .ppu_wbm_adr_i( ppu_wbm_adr_o ),
-    .ppu_wbm_dat_i( ppu_wbm_dat_o ),
-    .ppu_wbm_dat_o( ppu_wbm_dat_i_128 ),
-    .ppu_wbm_cyc_i( ppu_wbm_cyc_o ),
-    .ppu_wbm_wre_i( ppu_wbm_wre_o ),
-    .ppu_wbm_stb_i( ppu_wbm_stb_o ),
-    .ppu_wbm_ack_o( ppu_wbm_ack_i_128 ),
+   .ppu_wbm_adr_i ( ppu_wbm_adr_o ),
+   .ppu_wbm_dat_i ( ppu_wbm_dat_o ),
+   .ppu_wbm_dat_o ( ppu_wbm_dat_i_128 ),
+   .ppu_wbm_cyc_i ( ppu_wbm_cyc_o ),
+   .ppu_wbm_wre_i ( ppu_wbm_wre_o ),
+   .ppu_wbm_stb_i ( ppu_wbm_stb_o ),
+   .ppu_wbm_ack_o ( ppu_wbm_ack_i_128 ),
 
-    .data_in      ( disk_data_out ),
-    .data_out     ( disk_data_in ),
-    .write        ( disk_write ),
+   .data_in       ( disk_data_out ),
+   .data_out      ( disk_data_in ),
+   .write         ( disk_write ),
 
-    .drive        ( disk_drive ),
-    .motor        ( disk_motor ),
-    .step         ( disk_step ),
-    .dir          ( disk_dir ),
-    .head         ( disk_head ),
-    .valid        ( disk_valid ),
-    .sync         ( disk_sync ),
-    .crc_ok       ( disk_crc_ok ),
-    .rdy          ( disk_rdy ),
-    .tr0          ( disk_tr0 ),
-    .ind          ( disk_ind ),
-    .wrprt_dsk    ( system_floppy_wprot )
+   .drive         ( disk_drive ),
+   .motor         ( disk_motor ),
+   .step          ( disk_step ),
+   .dir           ( disk_dir ),
+   .head          ( disk_head ),
+   .valid         ( disk_valid ),
+   .sync          ( disk_sync ),
+   .crc_ok        ( disk_crc_ok ),
+   .rdy           ( disk_rdy ),
+   .tr0           ( disk_tr0 ),
+   .ind           ( disk_ind ),
+   .wrprt_dsk     ( system_floppy_wprot )
+);
+//------------------------------------------------------------//
+aberrant ay1(
+   .clk           ( ppuclk_p ),
+
+   .vm_init_i ( ppu_vm_init_o ),
+
+   .wbm_adr_i ( ppu_wbm_adr_o ),
+   .wbm_dat_i ( ppu_wbm_dat_o ),
+   .wbm_dat_o ( ppu_wbm_dat_i_abr ),
+   .wbm_cyc_i ( ppu_wbm_cyc_o ),
+   .wbm_wre_i ( ppu_wbm_wre_o ),
+   .wbm_sel_o ( ppu_wbm_sel_o ),
+   .wbm_stb_i ( ppu_wbm_stb_o ),
+   .wbm_ack_o ( ppu_wbm_ack_i_abr ),
+
+   .l_channel     ( audio_left ),
+   .r_channel     ( audio_right )
+//   .m_channel     ( mono_channel_O )
 ); 
+
 
 //------------------------------------------------------------//
 cpu_wb cpu1(
    .vm_clk_p    (cpuclk_p),
    .vm_clk_n    (cpuclk_n),
+   .vm_clk_slow (speed),
    .clk50hz     (vsync),
 
    .addr_ram    (addr_cpu_o),

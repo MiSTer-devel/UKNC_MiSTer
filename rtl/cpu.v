@@ -1,6 +1,7 @@
 module cpu_wb(
     input         vm_clk_p,
     input         vm_clk_n,
+    input         vm_clk_slow,
     input         clk50hz,
 
     output reg [15:0] addr_ram,
@@ -37,9 +38,6 @@ module cpu_wb(
 //========================================================================================
 //  Wishbone CPU
 //========================================================================================
-wire        vm_clk_ena  = 1'b0;
-wire        vm_clk_slow = 1'b0;
-
 wire        vm_evnt;
 
 wire        wbm_gnt_i = 1'b1;
@@ -89,6 +87,19 @@ assign read_ram = (ram_rd | rio_ram_rd) & wbm_stb_o;
 assign wrte_ram = (ram_wr | rio_ram_wr) & wbm_stb_o;
 //========================================================================================
 assign vm_evnt = tmr_ena_i | clk50hz;
+//========================================================================================
+reg [2:0] cpudelay;
+//reg       cpu_clk_enable;
+
+always @ (posedge vm_clk_p) begin
+   if (cpudelay != 3'd2) cpudelay <= cpudelay + 1'b1;  // считаем от 0 до 3
+   else cpudelay <= 3'd0;
+//   cpu_clk_enable <= ~cpu_clk_enable;
+//   cpudelay <= cpudelay + 1'b1;
+end
+//wire cpu_clk_enable = &cpudelay;  // формирователь импульса с заполнением 1/4
+//wire cpu_clk_enable = (cpudelay == 3'd0 | cpudelay == 3'd2);  // формирователь импульса с заполнением 1/4
+wire vm_clk_ena = cpudelay == 3'd2;
 //========================================================================================
 vm2_wb #(.VM2_CORE_FIX_PREFETCH(0)) cpu
 (
