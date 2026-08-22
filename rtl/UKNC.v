@@ -350,18 +350,18 @@ vp1_128fdd vp128(
 );
 //------------------------------------------------------------//
 aberrant ay1(
-   .clk           ( ppuclk_p ),
+   .clk           ( clk_25 ),
 
-   .vm_init_i ( ppu_vm_init_o ),
+   .vm_init_i     ( ppu_vm_init_o ),
 
-   .wbm_adr_i ( ppu_wbm_adr_o ),
-   .wbm_dat_i ( ppu_wbm_dat_o ),
-   .wbm_dat_o ( ppu_wbm_dat_i_abr ),
-   .wbm_cyc_i ( ppu_wbm_cyc_o ),
-   .wbm_wre_i ( ppu_wbm_wre_o ),
-   .wbm_sel_o ( ppu_wbm_sel_o ),
-   .wbm_stb_i ( ppu_wbm_stb_o ),
-   .wbm_ack_o ( ppu_wbm_ack_i_abr ),
+   .wbm_adr_i     ( ppu_wbm_adr_o ),
+   .wbm_dat_i     ( ppu_wbm_dat_o ),
+   .wbm_dat_o     ( ppu_wbm_dat_i_abr ),
+   .wbm_cyc_i     ( ppu_wbm_cyc_o ),
+   .wbm_wre_i     ( ppu_wbm_wre_o ),
+   .wbm_sel_o     ( ppu_wbm_sel_o ),
+   .wbm_stb_i     ( ppu_wbm_stb_o ),
+   .wbm_ack_o     ( ppu_wbm_ack_i_abr ),
 
    .l_channel     ( audio_left ),
    .r_channel     ( audio_right )

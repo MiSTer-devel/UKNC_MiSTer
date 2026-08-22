@@ -64,10 +64,8 @@ reg  [3:0] psg_div;
 reg  ce_psg;
 
 always @(posedge clk) begin
-   if(psg_div == 4'd13) psg_div <= 4'd0;
-   else psg_div <= psg_div + 1'd1;
-
-   ce_psg <= !psg_div;
+psg_div <= (psg_div == 4'd13) ? 4'd0 : psg_div + 4'd1;
+ce_psg  <= (psg_div == 4'd13);
 end
 
 //---------------------------------------------------------------------------------
@@ -92,8 +90,8 @@ YM2149 dd1(
     .CHANNEL_B ( psg_ch_b_1 ),     // PSG Output channel B
     .CHANNEL_C ( psg_ch_c_1 ),     // PSG Output channel C
 
-    .SEL       ( 1'b1 ),
-    .MODE      ( 1'b1 ),
+    .SEL       ( 1'b0 ),
+    .MODE      ( 1'b0 ),
 
     .ACTIVE    ( ),
 
@@ -110,18 +108,18 @@ wire [7:0] psg_ch_c_2;
 
 YM2149 dd2(
     .CLK       ( clk ),            // Global clock
-    .CE        ( 1'b1),            // PSG Clock enable
+    .CE        ( ce_psg ),         // PSG Clock enable
     .RESET     ( vm_init_i),       // Chip RESET (set all Registers to '0', active hi)
-    .BDIR      ( bdir2),           // Bus Direction (0 - read , 1 - write)
-    .BC        ( bc2),             // Bus control
+    .BDIR      ( bdir2 ),          // Bus Direction (0 - read , 1 - write)
+    .BC        ( bc2 ),            // Bus control
     .DI        ( wbm_dat_i[7:0] ), // Data In
     .DO        ( DO_1 ),           // Data Out
     .CHANNEL_A ( psg_ch_a_2 ),     // PSG Output channel A
     .CHANNEL_B ( psg_ch_b_2 ),     // PSG Output channel B
     .CHANNEL_C ( psg_ch_c_2 ),     // PSG Output channel C
 
-    .SEL       ( 1'b1 ),
-    .MODE      ( 1'b1 ),
+    .SEL       ( 1'b0 ),
+    .MODE      ( 1'b0 ),
 
     .ACTIVE   ( ),
 
