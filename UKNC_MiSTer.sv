@@ -252,10 +252,11 @@ wire [63:0] img_size;
 
 wire  [7:0] uart_mode;
 
-//hps_io #(.CONF_STR(CONF_STR), .PS2DIV(14'd2000), .VDNUM(4), .WIDE(0)) hps_io   //50MHz // .PS2DIV(3200)   //100MHz
-hps_io #(.CONF_STR(CONF_STR), .PS2DIV(14'd2000), .VDNUM(2), .WIDE(0)) hps_io   //50MHz // .PS2DIV(3200)   //100MHz
+//hps_io #(.CONF_STR(CONF_STR), .PS2DIV(14'd2000), .VDNUM(4), .WIDE(0)) hps_io
+hps_io #(.CONF_STR(CONF_STR), .VDNUM(2), .WIDE(1)) hps_io
 (
-	.clk_sys      (CLK_50M),
+//	.clk_sys      (CLK_50M),
+	.clk_sys      (clk_25),
 	.HPS_BUS      (HPS_BUS),
 	.EXT_BUS      (EXT_BUS),
 	.gamma_bus    (gamma_bus),
@@ -296,7 +297,8 @@ wire  [2:0] mgmt_req;
 wire [35:0] EXT_BUS;
 
 hps_ext hps_ext (
-	.clk_sys      (CLK_50M),
+//	.clk_sys      (CLK_50M),
+	.clk_sys      (clk_25),
 	.EXT_BUS      (EXT_BUS),
 
 	.ext_din      (mgmt_din),
@@ -529,7 +531,8 @@ assign mgmt_readdata = mgmt_ide0_cs ? mgmt_ide0_readdata : mgmt_ide1_cs ? mgmt_i
 */
 
 ide ide (
-	.clk           (clk_50),
+//	.clk           (CLK_50M),
+	.clk           (clk_25),
 	.rst_n         (~reset_key),
 
 //	.irq           (),
