@@ -98,8 +98,9 @@ assign clk1kHz  = sound_div[4];  // 8000/8   = 1000 Hz
 assign clk500Hz = sound_div[5];  // 8000/16  = 500  Hz
 assign clk250Hz = sound_div[6];  // 8000/32  = 250  Hz
 assign clk60Hz  = !sound_div;    // 8000/128 = 60   Hz
-assign sound         = R177716[7] & (clk8kHz & R177716[12]) & (clk1kHz & R177716[11]) &
-                      (clk500Hz & R177716[10]) & (clk250Hz & R177716[9]) & (clk60Hz & R177716[8]) || ~(|R177716[12:8]) & R177716[7];
+// a tone that is not selected is don't-care, so one bit of [12:8] sounds its tone
+assign sound         = R177716[7] & (clk8kHz  | ~R177716[12]) & (clk1kHz  | ~R177716[11]) &
+                      (clk500Hz | ~R177716[10]) & (clk250Hz | ~R177716[9]) & (clk60Hz  | ~R177716[8]);
 //========================================================================================
 always @(posedge pin_vm_clk_p) begin
     if(pin_vm_init_i) begin
