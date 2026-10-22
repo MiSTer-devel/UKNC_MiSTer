@@ -7,9 +7,9 @@ module video
    output reg        vsync,
    output reg        hblank,
    output reg        vblank,
-   output reg [ 2:0] red,
-   output reg [ 2:0] green,
-   output reg [ 2:0] blue,
+   output reg [ 7:0] red,
+   output reg [ 7:0] green,
+   output reg [ 7:0] blue,
 
    output      [3:0] cycle,
 
@@ -115,15 +115,20 @@ end
 // ---------------------------------------------------------------------
 // display out logic
 // ---------------------------------------------------------------------
-wire [2:0] curR = (cursor & reg_img[2]) ? reg_img[3] ? 3'b111 : 3'b100 : 3'd0;
-wire [2:0] curG = (cursor & reg_img[1]) ? reg_img[3] ? 3'b111 : 3'b100 : 3'd0;
-wire [2:0] curB = (cursor & reg_img[0]) ? reg_img[3] ? 3'b111 : 3'b100 : 3'd0;
+// Channel levels as in UKNCBTL: Y gives 80 or FF, a cleared intensity bit
+// (reg_img[18:16], R G B) dims the channel to 60 or DF.  The cursor takes
+// the place of the pixel, in its own YRGB at full intensity.
+function [7:0] level(input on, input y, input intensity);
+   level = !on ? 8'h00 : y ? (intensity ? 8'hFF : 8'hDF) : (intensity ? 8'h80 : 8'h60);
+endfunction
 
-wire [3:0] cvt = reg_clr[tripl*4 +:4];
+wire [3:0] cvt  = reg_clr[tripl*4 +:4];
+wire [3:0] yrgb = cursor ? reg_img[3:0] : cvt;
+wire [2:0] ints = cursor ? 3'b111 : reg_img[18:16];
 
-wire [2:0] r = (cvt[2] ? reg_img[18] ? 3'b111 : cvt[3] ? 3'b110 : 3'b100 : 3'd0) | curR;
-wire [2:0] g = (cvt[1] ? reg_img[17] ? 3'b111 : cvt[3] ? 3'b110 : 3'b100 : 3'd0) | curG;
-wire [2:0] b = (cvt[0] ? reg_img[16] ? 3'b111 : cvt[3] ? 3'b110 : 3'b100 : 3'd0) | curB;
+wire [7:0] r = level(yrgb[2], yrgb[3], ints[2]);
+wire [7:0] g = level(yrgb[1], yrgb[3], ints[1]);
+wire [7:0] b = level(yrgb[0], yrgb[3], ints[0]);
 
 always @(posedge clk) begin
    red   <= r;
