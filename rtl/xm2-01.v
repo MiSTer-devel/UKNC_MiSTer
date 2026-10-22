@@ -70,7 +70,12 @@ assign pin_wbm_ack_o = ask;// & pin_wbm_stb_i;
 assign pin_vm_virq_o = (|{setVIRQtm & enVIRQtm, setVIRQbt & enVIRQbt});
 assign pin_vm_aclo_o =~R177716[15];
 assign pin_vm_dclo_o = R177716[5];
-assign pin_wbi_stb_o = setVIRQtm|setVIRQbt ? 1'b0 : pin_wbi_stb_i;
+// The vector fetch goes on down the chain unless this chip answers it.
+// Who answers is decided while the strobe is low and held for the whole
+// fetch: a request that is set but already taken (disabled until 177714
+// or 177702 is read) must not hold the strobe back from vp1_120.
+reg  [1:0] vec_own = 2'd0; // 1 - timer 304, 2 - keyboard 300, 0 - pass on
+assign pin_wbi_stb_o = pin_wbi_stb_i & (vec_own == 2'd0);
 assign pin_vm_halt_o = R177716[4];
 assign setVIRQtm     = &R177710[7:6];
 assign setVIRQbt     = press_btn & R177700;
@@ -202,10 +207,12 @@ always @(posedge pin_vm_clk_p) begin
         if(!pin_wbi_stb_i)begin
             pin_wbi_ack_o <= 1'b0;
             pin_wbi_dat_o <= 16'o0;
+            vec_own <= (setVIRQtm && enVIRQtm) ? 2'd1 :
+                       (setVIRQbt && enVIRQbt) ? 2'd2 : 2'd0;
         end else
         if(!wbi_stb_i_old&&pin_wbi_stb_i)begin
-            if(setVIRQtm && enVIRQtm)begin pin_wbi_dat_o <= 16'o304; enVIRQtm <= 1'b0; pin_wbi_ack_o <= 1'b1; end
-            else if(setVIRQbt && enVIRQbt)begin pin_wbi_dat_o <= 16'o300; enVIRQbt <= 1'b0; pin_wbi_ack_o <= 1'b1; end
+            if(vec_own == 2'd1)begin pin_wbi_dat_o <= 16'o304; enVIRQtm <= 1'b0; pin_wbi_ack_o <= 1'b1; end
+            else if(vec_own == 2'd2)begin pin_wbi_dat_o <= 16'o300; enVIRQbt <= 1'b0; pin_wbi_ack_o <= 1'b1; end
         end
 
         if(R177702!=but_data && |but_data) begin
