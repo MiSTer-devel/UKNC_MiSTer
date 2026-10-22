@@ -238,11 +238,11 @@ wire  [1:0] sd_rd;
 wire  [1:0] sd_wr;
 wire  [1:0] sd_ack;
 wire        sd_ack_conf;
-wire  [8:0] sd_buff_addr;   // [7:0] for 16bit BUS WIDE, [8:0] for 8bit BUS WIDE
-wire  [7:0] sd_buff_dout;   // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
-wire  [7:0] sd_buff_din_sd; // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
+wire  [7:0] sd_buff_addr;   // [7:0] for 16bit BUS WIDE, [8:0] for 8bit BUS WIDE
+wire [15:0] sd_buff_dout;   // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
+wire [15:0] sd_buff_din_sd; // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
 //wire  [7:0] sd_buff_din[4] = '{sd_buff_din_sd,sd_buff_din_sd,sd_buff_din_sd,sd_buff_din_sd}; // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
-wire  [7:0] sd_buff_din[2] = '{sd_buff_din_sd,sd_buff_din_sd}; // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
+wire [15:0] sd_buff_din[2] = '{sd_buff_din_sd,sd_buff_din_sd}; // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
 wire        sd_buff_wr;
 
 //wire  [3:0] img_mounted;
