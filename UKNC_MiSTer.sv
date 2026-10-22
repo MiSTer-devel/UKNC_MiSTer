@@ -338,7 +338,7 @@ UKNC UKNC (
 
 	.nbut          (~reset_key),
 	.sound         (audio),
-//	.rtc           (rtc),
+	.rtc           (rtc),
 
 	.vsync         (VSync),
 
@@ -360,7 +360,7 @@ UKNC UKNC (
 
 	.speed         (~status[11]),
 	.ps2_key       (ps2_key),
-	.mouse         ({ps2_mouse[5],ps2_mouse[21:16], ps2_mouse[0], ps2_mouse[4],ps2_mouse[13:8], ps2_mouse[1]}),
+	.ps2_mouse     (ps2_mouse),
 	.audio_left    (audio_left),
 	.audio_right   (audio_right),
 

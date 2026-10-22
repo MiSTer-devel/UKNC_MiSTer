@@ -32,7 +32,6 @@ module ppu_wb(
     output        wbi_stb_o,
 
     output        tmr_ena_o,
-    input  [15:0] mouse,
 
     output  [2:0] ide_addr,
     output        ide_read,
@@ -434,11 +433,6 @@ always @(posedge vm_clk_p)
                         ack        <= 1'b1;
                         rio        <= 1'b1;
                     end else*/
-                    if(wbm_adr_o[8:1] == 'o200)begin   // 177400
-                        data_rio   <= mouse;
-                        ack        <= 1'b1;
-                        rio        <= 1'b1;
-                    end else
                     begin
                         //ack       <= 1'b1;
                     end

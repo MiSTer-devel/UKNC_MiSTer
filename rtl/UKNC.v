@@ -24,7 +24,8 @@ module UKNC (
 
    input         speed,
    input  [10:0] ps2_key,
-   input  [15:0] mouse,
+   input  [24:0] ps2_mouse,
+   input  [64:0] rtc,
    output [10:0] audio_left,
    output [10:0] audio_right,
 
@@ -126,6 +127,9 @@ wire        ppu_wbi_stb_o_xm2;
 //aberrant
 wire [15:0]ppu_wbm_dat_i_abr;
 wire       ppu_wbm_ack_i_abr;
+//kakave
+wire [15:0]ppu_wbm_dat_i_kkv;
+wire       ppu_wbm_ack_i_kkv;
  
 
 assign ppu_vm_virq_i = ppu_vm_virq_i_xm2 | ppu_vm_virq_i_vp;
@@ -133,9 +137,10 @@ assign ppu_vm_virq_i = ppu_vm_virq_i_xm2 | ppu_vm_virq_i_vp;
 assign ppu_wbm_dat_i = ppu_wbm_ack_i_xm2 ? ppu_wbm_dat_i_xm2 :
                        ppu_wbm_ack_i_vp  ? ppu_wbm_dat_i_vp  :
                        ppu_wbm_ack_i_128 ? ppu_wbm_dat_i_128 :
-                       ppu_wbm_ack_i_abr ? ppu_wbm_dat_i_abr : 16'o0;
+                       ppu_wbm_ack_i_abr ? ppu_wbm_dat_i_abr :
+                       ppu_wbm_ack_i_kkv ? ppu_wbm_dat_i_kkv : 16'o0;
 
-assign ppu_wbm_ack_i = ppu_wbm_ack_i_xm2 | ppu_wbm_ack_i_vp | ppu_wbm_ack_i_128 | ppu_wbm_ack_i_abr;
+assign ppu_wbm_ack_i = ppu_wbm_ack_i_xm2 | ppu_wbm_ack_i_vp | ppu_wbm_ack_i_128 | ppu_wbm_ack_i_abr | ppu_wbm_ack_i_kkv;
 
 assign ppu_wbi_dat_i = ppu_wbi_ack_i_xm2 ? ppu_wbi_dat_i_xm2 :
                        ppu_wbi_ack_i_vp  ? ppu_wbi_dat_i_vp  : 16'o0;
@@ -217,7 +222,6 @@ ppu_wb ppu1(
    .wbi_stb_o   (ppu_wbi_stb_o),
 
    .tmr_ena_o   (pin_tmr_ena_o),
-   .mouse       (mouse),
 
    .ide_addr    (ide_addr),
    .ide_read    (ide_read),
@@ -367,6 +371,28 @@ aberrant ay1(
    .r_channel     ( audio_right )
 //   .m_channel     ( mono_channel_O )
 ); 
+
+//------------------------------------------------------------//
+// Kakave+ cartridge: mouse at 177400, RTC at 177410
+kakave kkv(
+   .clk        ( clk_25 ),
+   .init       ( ppu_vm_init_o ),
+   .adr        ( ppu_wbm_adr_o ),
+   .dat_i      ( ppu_wbm_dat_o ),
+   .dat_o      ( ppu_wbm_dat_i_kkv ),
+   .wre        ( ppu_wbm_wre_o ),
+   .sel        ( ppu_wbm_sel_o ),
+   .stb        ( ppu_wbm_stb_o ),
+   .ack        ( ppu_wbm_ack_i_kkv ),
+   .mouse_tgl  ( ps2_mouse[24] ),
+   .mouse_dx   ( {ps2_mouse[4], ps2_mouse[15:8]} ),
+   .mouse_dy   ( {ps2_mouse[5], ps2_mouse[23:16]} ),
+   .mouse_btns ( ps2_mouse[1:0] ),
+   .rtc_tgl    ( rtc[64] ),
+   .rtc_bcd    ( rtc[55:0] ),
+   .mouse_en   ( 1'b1 ),
+   .rtc_en     ( 1'b1 )
+);
 
 
 //------------------------------------------------------------//
