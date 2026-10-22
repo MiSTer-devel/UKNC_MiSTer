@@ -282,6 +282,7 @@ wire        disk_step;
 wire        disk_dir;
 wire        disk_head;
 wire        disk_write;
+wire  [3:0] system_floppy_wprot = 4'b1111; // FDD write is not implemented yet
 
 fdd fdd(
    .clk_25       ( clk_25 ),
