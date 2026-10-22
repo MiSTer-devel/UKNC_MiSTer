@@ -227,6 +227,7 @@ ppu_wb ppu1(
 );
 //------------------------------------------------------------//
 wire  [7:0] keycode;
+wire        keytgl;
 
 xm2_01 dd1(
    .pin_vm_clk25    (clk_25),
@@ -255,6 +256,7 @@ xm2_01 dd1(
    .pin_wbi_stb_o   (ppu_wbi_stb_o_xm2),
 
    .but_data        (keycode),
+   .but_tgl         (keytgl),
 
    .sound           (sound)
 );
@@ -264,6 +266,7 @@ keyboard keyboard(
    .rst         (~sys_rst),
 
    .keycode     (keycode),
+   .keytgl      (keytgl),
    .ps2_key     (ps2_key)
 );
 
