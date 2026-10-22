@@ -328,10 +328,11 @@ pll pll (
 wire        audio;
 wire  [9:0] audio_left;
 wire  [9:0] audio_right;
-//assign AUDIO_R = {15{audio}};
-//assign AUDIO_L = AUDIO_R;
-assign AUDIO_L = {audio_left,  6'd0};
-assign AUDIO_R = {audio_right, 6'd0};
+// the beeper (R177716 bit 7) at 1/8 of full scale on top of the PSG/Covox mix
+wire [16:0] mix_l = {1'b0, audio_left,  6'd0} + {3'b000, audio, 13'd0};
+wire [16:0] mix_r = {1'b0, audio_right, 6'd0} + {3'b000, audio, 13'd0};
+assign AUDIO_L = mix_l[16] ? 16'hFFFF : mix_l[15:0];
+assign AUDIO_R = mix_r[16] ? 16'hFFFF : mix_r[15:0];
 
 UKNC UKNC (
 	.clk_25        (clk_25),
