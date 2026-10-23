@@ -26,10 +26,10 @@ module fdd (
    input         rbusy,
    input         sd_ack,
 
-   output [ 7:0] outbyte,
-   input         outen,   // when outen=1, a byte of sector content
-   input  [ 8:0] outaddr, // outaddr from 0 to 511, because the sector size is 512
-   input  [ 7:0] inbyte,   // a byte of sector content 
+   output [15:0] outbyte,
+   input         outen,   // when outen=1, a word of sector content
+   input  [ 7:0] outaddr, // outaddr from 0 to 255, the 512 byte sector in 16-bit words
+   input  [15:0] inbyte,  // a word of sector content (hps_io WIDE=1)
    input  [ 3:0] img_mounted,
    input  [19:0] img_size
 );
@@ -178,7 +178,7 @@ always @(posedge clk_25) begin
    if (~clk_dsk_n && clk_dsk) count_word <= _data ? count_word + 1'b1 : 8'd0;
 end
 
-dpram_dif #(9,8,8,16) fdd_fifo
+dpram_dif #(8,16,8,16) fdd_fifo
 (
    .clock     (clk_25),
    .address_a (outaddr),
