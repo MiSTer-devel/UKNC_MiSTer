@@ -56,7 +56,7 @@ assign led_init = ~motor;
 assign sync     = (word_sectr == 9'h18 || word_sectr == 9'h2F ) && motor;
 assign crc_ok   = (word_sectr == 9'h1C || word_sectr == 9'h131) && motor;
 //assign crc_ok   = ((word_sectr >= 9'h18 && word_sectr <= 9'h1C ) || (word_sectr >= 9'h2F && word_sectr <= 9'h131)) && motor;
-assign ind      = (word_sectr >= 9'h01 || word_sectr <= 9'h4) && motor;
+assign ind      = no_sec == 4'd0 && word_sectr < 9'h4B && motor; // once per spin, 4.8 ms
 assign tr0      = !no_trk && motor;
 
 wire disk_insert = mount_dsk[drive];
