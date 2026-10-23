@@ -77,7 +77,10 @@ reg         C177564 = 1'b0;
 reg         C176664 = 1'b0;
 reg         C176674 = 1'b0;
 
-assign cpu_wbi_stb_o = |setVIRQCrx || |setVIRQCtx ? 1'b0 : cpu_wbi_stb_i;
+// as in xm2: pass the vector fetch on to vp065 unless a request here is
+// enabled, decided while the strobe is low and held for the whole fetch
+reg  cpu_own = 1'b0;
+assign cpu_wbi_stb_o = cpu_wbi_stb_i & ~cpu_own;
 assign ppu_wbi_stb_o = |setVIRQPtx || |setVIRQPrx ? 1'b1 : ppu_wbi_stb_i;
 
 assign cpu_vm_virq_o = (|{setVIRQCrx[1]&enVIRQCrx[1],setVIRQCrx[0]&enVIRQCrx[0],setVIRQCtx[2]&enVIRQCtx[2],setVIRQCtx[1]&enVIRQCtx[1],setVIRQCtx[0]&enVIRQCtx[0]});
@@ -300,8 +303,9 @@ always @(posedge clk) begin
                 if(!cpu_wbi_stb_i)begin
                     cpu_wbi_dat_o <= 16'o0;
                     cpu_wbi_ack_o <= 1'b0;
+                    cpu_own <= |(setVIRQCrx & enVIRQCrx) || |(setVIRQCtx & enVIRQCtx);
                 end else
-                if(~cpu_wbi_stb_i_old & cpu_wbi_stb_i)begin
+                if(~cpu_wbi_stb_i_old & cpu_wbi_stb_i & cpu_own)begin
                      if(setVIRQCrx[0] && enVIRQCrx[0])begin cpu_wbi_dat_o <= 16'o60; enVIRQCrx[0] <= 1'b0; cpu_wbi_ack_o <= 1'b1; end
                      else if(setVIRQCtx[0] && enVIRQCtx[0])begin cpu_wbi_dat_o <= 16'o64; enVIRQCtx[0] <= 1'b0; cpu_wbi_ack_o <= 1'b1; end
                         else if(setVIRQCrx[1] && enVIRQCrx[1])begin cpu_wbi_dat_o <= 16'o460; enVIRQCrx[1] <= 1'b0; cpu_wbi_ack_o <= 1'b1; end
