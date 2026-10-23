@@ -25,6 +25,7 @@ module xm2_01(
    output        pin_wbi_stb_o,
 
    input  [ 7:0] but_data,
+   input         but_tgl,   // toggles with every new but_data
 
    output        sound
 );
@@ -33,6 +34,7 @@ wire       ce;
 reg        ce_old        = 1'b0;
 reg        press_btn     = 1'b0;
 reg        wbi_stb_i_old = 0;
+reg        but_tgl_old   = 0;
 reg        ask           = 1'b0;
 //reg        pin_wbi_ack_o = 1'b0;
 //reg  [15:0]pin_wbi_dat_o = 0;
@@ -216,7 +218,8 @@ always @(posedge pin_vm_clk_p) begin
             else if(vec_own == 2'd2)begin pin_wbi_dat_o <= 16'o300; enVIRQbt <= 1'b0; pin_wbi_ack_o <= 1'b1; end
         end
 
-        if(R177702!=but_data && |but_data) begin
+        but_tgl_old <= but_tgl;
+        if(but_tgl_old != but_tgl) begin
            press_btn <= 1'b1;
            R177702 <= but_data;
         end

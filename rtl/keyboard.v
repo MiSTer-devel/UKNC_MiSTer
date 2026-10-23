@@ -4,6 +4,7 @@ module keyboard
    input            rst,
 
    output reg [7:0] keycode,
+   output reg       keytgl,  // toggles with every new keycode
    input     [10:0] ps2_key
 );
 //--------------------------------------------------------
@@ -113,6 +114,40 @@ always begin
 		endcase
 end
 
-always @(posedge clk) if(ukey) keycode <= press ? ukey : ((ukey & 8'o17)|8'o200);
+// A press sends the key's code; a release sends 0200 | row, but only once
+// every key of that row is up, as the UKNC keyboard does.  held[] keeps
+// PS/2 typematic repeats and releases of keys never pressed out of the
+// per-row count.
+wire [3:0] row = ukey[3:0];
+reg  [2:0] row_keys[0:15];
+reg  [511:0] held;
+reg        old_stb;
+
+always @(posedge clk) begin
+   integer i;
+   old_stb <= ps2_key[10];
+   if(rst) begin
+      held <= 0;
+      for(i = 0; i < 16; i = i + 1) row_keys[i] <= 0;
+   end
+   else if(old_stb != ps2_key[10] && ukey) begin
+      if(press) begin
+         if(!held[ps2_key[8:0]]) begin
+            held[ps2_key[8:0]] <= 1'b1;
+            row_keys[row] <= row_keys[row] + 1'd1;
+            keycode <= ukey;
+            keytgl  <= ~keytgl;
+         end
+      end
+      else if(held[ps2_key[8:0]]) begin
+         held[ps2_key[8:0]] <= 1'b0;
+         row_keys[row] <= row_keys[row] - 1'd1;
+         if(row_keys[row] == 1) begin
+            keycode <= {4'b1000, row};
+            keytgl  <= ~keytgl;
+         end
+      end
+   end
+end
 
 endmodule
