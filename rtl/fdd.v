@@ -156,16 +156,14 @@ assign rdy     = ~ppu_vm_init_i;
 assign rstart  = {3'b000, read_sd}<<drive;
 assign wstart  = {3'b000,write_sd}<<drive;
 
-wire is_clean = ~motor|rbusy;
-
 reg  old_sd_rd;
-reg  old_is_clean;
 
+// one read per sector: up at the header CRC, down on sd_ack
 always @(posedge clk_25)
    begin
       old_sd_rd <= sd_rd;
-      old_is_clean <= is_clean;
-      if ((~old_sd_rd & sd_rd) | (~old_is_clean & is_clean)) read_sd <= is_clean ? 1'b0 : disk_insert;
+      if (~motor | sd_ack) read_sd <= 1'b0;
+      else if (~old_sd_rd & sd_rd) read_sd <= disk_insert;
    end
 //always @(posedge sd_rd or posedge is_clean)  read_sd <= is_clean ? 1'b0 : disk_insert;
 //always @(posedge write or posedge is_clean)write_sd <= is_clean ? 1'b0 : _data ? disk_insert : write_sd;
