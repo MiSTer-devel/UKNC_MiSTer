@@ -404,7 +404,7 @@ wire  [3:0] mask_ppu_o;
 wire [31:0] data_ppu_i;
 wire        ackn_ppu_i;
 
-wire  [2:0] r,g,b;
+wire  [7:0] r,g,b;
 wire        ce_pix;
 wire        HBlank,VBlank;
 wire        HSync,VSync;
@@ -477,9 +477,9 @@ video_mixer #(.LINE_LENGTH(650), .GAMMA(1)) video_mixer
 	.hq2x         (scale==1),
 	.freeze_sync  (),
 	
-	.R(status[12] ? {r,r,r[2:1]} : {g,g,g[2:1]}),
-	.G(status[12] ? {g,g,g[2:1]} : {r,r,r[2:1]}),
-	.B({b,b,b[2:1]})
+	.R(status[12] ? r : g),
+	.G(status[12] ? g : r),
+	.B(b)
 );
 
 
