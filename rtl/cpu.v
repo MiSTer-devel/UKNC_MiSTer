@@ -238,26 +238,6 @@ always @(posedge vm_clk_p)
                         ack          <= 1'b1;
                         rio          <= 1'b1;
                     end else
-                    if(wbm_adr_o[12:1] == 'o7274) begin
-                        data_rio     <= 16'o0;
-                        ack          <= 1'b1;
-                        rio          <= 1'b1;
-                    end else
-                    if(wbm_adr_o[12:1] == 'o7275) begin
-                        data_rio     <= 16'o0;
-                        ack          <= 1'b1;
-                        rio          <= 1'b1;
-                    end else
-                    if(wbm_adr_o[12:1] == 'o7276) begin
-                        data_rio     <= 16'o0;
-                        ack          <= 1'b1;
-                        rio          <= 1'b1;
-                    end else
-                    if(wbm_adr_o[12:1] == 'o7277) begin
-                        data_rio     <= 16'o0;
-                        ack          <= 1'b1;
-                        rio          <= 1'b1;
-                    end else
                     if(wbm_adr_o[12:1] == 'o7320) begin
                         data_rio     <= R176640;
                         rio          <= 1'b1;
