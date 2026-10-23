@@ -161,12 +161,12 @@ YM2149 dd3(
 //---------------------------------------------------------------------------------
 // mixer
 //---------------------------------------------------------------------------------
-assign l_channel = psg_l;
-assign r_channel = psg_r;
+assign l_channel = psg_l[10] ? 10'h3FF : psg_l[9:0];
+assign r_channel = psg_r[10] ? 10'h3FF : psg_r[9:0];
 
 reg  [8:0] sum_ch_a, sum_ch_b, sum_ch_c;
 reg  [7:0] psg_a, psg_b, psg_c;
-reg  [9:0] psg_l, psg_r; //, opn_s;
+reg [10:0] psg_l, psg_r; //, opn_s;
 //reg [11:0] ch_l, ch_r;
 
 always @(posedge clk)begin
@@ -178,8 +178,8 @@ always @(posedge clk)begin
    psg_b <= sum_ch_b[8] ? 8'hFF : sum_ch_b[7:0];
    psg_c <= sum_ch_c[8] ? 8'hFF : sum_ch_c[7:0];
 
-   psg_l <= {1'b0, psg_a, 1'd0} + {2'b00, psg_b} + {1'b0, covox, 1'd0};
-   psg_r <= {1'b0, psg_c, 1'd0} + {2'b00, psg_b} + {1'b0, covox, 1'd0};
+   psg_l <= {2'b00, psg_a, 1'd0} + {3'b000, psg_b} + {2'b00, covox, 1'd0};
+   psg_r <= {2'b00, psg_c, 1'd0} + {3'b000, psg_b} + {2'b00, covox, 1'd0};
 //   psg_l <= {3'b000,                   psg_a, 1'd0} + {4'b0000, PSG_MIX ? psg_c : psg_b};
 //   psg_r <= {3'b000, PSG_MIX ? psg_b : psg_c, 1'd0} + {4'b0000, PSG_MIX ? psg_c : psg_b};
 //	opn_s <= {{2{opn_0[15]}}, opn_0[15:6]} + {{2{opn_1[15]}}, opn_1[15:6]};
