@@ -202,9 +202,9 @@ wire [2:0] scale = status[10:8];
 localparam CONF_STR = {
 	"UKNC;UART19200;",
 	"-;",
-	"S0,DSK,Mount Drive 1;",
-	"S1,DSK,Mount Drive 2;",
-	"S2,VHD,Mount Drive;",
+	"S0,DSK,Mount FDD 0;",
+	"S1,DSK,Mount FDD 0;",
+	"S2,VHD,Mount HDD;",
 //	"S2,DSK,Mount Drive 3;",
 //	"S3,DSK,Mount Drive 4;",
 //	"S4,VHD,Mount Drive;",
@@ -252,10 +252,8 @@ wire [63:0] img_size;
 
 wire  [7:0] uart_mode;
 
-//hps_io #(.CONF_STR(CONF_STR), .PS2DIV(14'd2000), .VDNUM(4), .WIDE(0)) hps_io
 hps_io #(.CONF_STR(CONF_STR), .VDNUM(2), .WIDE(1)) hps_io
 (
-//	.clk_sys      (CLK_50M),
 	.clk_sys      (clk_25),
 	.HPS_BUS      (HPS_BUS),
 	.EXT_BUS      (EXT_BUS),
@@ -297,7 +295,6 @@ wire  [2:0] mgmt_req;
 wire [35:0] EXT_BUS;
 
 hps_ext hps_ext (
-//	.clk_sys      (CLK_50M),
 	.clk_sys      (clk_25),
 	.EXT_BUS      (EXT_BUS),
 
@@ -492,18 +489,6 @@ assign      reset_key = RESET | buttons[1] | status[0];
 // IDE
 //
 logic           mgmt_ide0_cs;
-/*logic [15:0]    mgmt_ide0_readdata;
-logic           ide0_command_cs;
-logic           ide0_control_cs;
-logic           ide0_comd_ctrl_select;
-logic           ide0_io_read;
-logic           ide0_io_read_1;
-logic           ide0_io_write;
-logic           prev_ide0_io_read;
-logic           prev_ide0_io_write;
-logic [3:0]     ide0_address_1;
-logic [15:0]    ide0_writedata;
-*/ 
 logic [2:0]     ide_addr;
 logic [15:0]    ide_writedata;
 logic [15:0]    ide_readdata;
@@ -511,28 +496,8 @@ logic           ide_read;
 logic           ide_write;
 
 assign mgmt_ide0_cs     = (mgmt_addr[15:8] == 8'hF0);
-/*assign ide0_command_cs  = ~ide0_cs1fx;
-assign ide0_control_cs  = ~ide0_cs3fx & &ide0_address[2:1];
-assign ide0_io_read     = ~ide0_io_read_n  & (ide0_command_cs | ide0_control_cs);
-assign ide0_io_write    = ~ide0_io_write_n & (ide0_command_cs | ide0_control_cs);
-
-always_ff @(posedge clk_50)
-begin
-	ide0_io_read_1          <= ide0_io_read;
-	prev_ide0_io_read       <= ide0_io_read_1;
-	prev_ide0_io_write      <= ide0_io_write;
-	ide0_address_1          <= {1'b0, ide_address};
-end */
-/*  ao486
-assign mgmt_ide0_cs  = (mgmt_addr[15:8] == 8'hF0);
-assign mgmt_ide1_cs  = (mgmt_addr[15:8] == 8'hF1);
-assign mgmt_fdd_cs   = (mgmt_addr[15:8] == 8'hF2);
-assign mgmt_rtc_cs   = (mgmt_addr[15:8] == 8'hF4);
-assign mgmt_readdata = mgmt_ide0_cs ? mgmt_ide0_readdata : mgmt_ide1_cs ? mgmt_ide1_readdata : mgmt_fdd_readdata;
-*/
 
 ide ide (
-//	.clk           (CLK_50M),
 	.clk           (clk_25),
 	.rst_n         (~reset_key),
 
