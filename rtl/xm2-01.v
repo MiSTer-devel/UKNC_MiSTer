@@ -60,11 +60,6 @@ wire       zero_tmr;
 reg        zero_tmr_old  = 0;
 wire       timer_clk;
 
-reg        clk8kHz = 0;
-wire       clk1kHz;
-wire       clk500Hz;
-wire       clk250Hz;
-wire       clk60Hz;
 
 //========================================================================================
 assign pin_wbm_dat_o = wbm_dat_o;
@@ -88,26 +83,18 @@ assign timer_clk     = R177710[2:1]==2'b00 ? count_clk[0] :
                        R177710[2:1]==2'b01 ? count_clk[1] :
                        R177710[2:1]==2'b10 ? count_clk[2] : count_clk[3];
 //========================================================================================
-reg [11:0]sount_count = 0;
-reg [ 6:0]sound_div = 0;
-always @(posedge pin_vm_clk25)
-   if(sount_count==3124)begin
-      sount_count <= 12'd0;
-      clk8kHz <= ~clk8kHz;
-   end else begin
-      sount_count <= sount_count + 1'b1;
-      if(sount_count==1562)clk8kHz <= ~clk8kHz;
-   end
-
-always @(posedge clk8kHz)sound_div <= sound_div + 1'b1;
-
-assign clk1kHz  = sound_div[4];  // 8000/8   = 1000 Hz
-assign clk500Hz = sound_div[5];  // 8000/16  = 500  Hz
-assign clk250Hz = sound_div[6];  // 8000/32  = 250  Hz
-assign clk60Hz  = !sound_div;    // 8000/128 = 60   Hz
-// a tone that is not selected is don't-care, so one bit of [12:8] sounds its tone
-assign sound         = R177716[7] & (clk8kHz  | ~R177716[12]) & (clk1kHz  | ~R177716[11]) &
-                      (clk500Hz | ~R177716[10]) & (clk250Hz | ~R177716[9]) & (clk60Hz  | ~R177716[8]);
+// The tones of R177716[12:8] are taps of the timer counter (eCat3, UKNCBTL):
+// 60, 250, 500, 1000 and 8000 Hz with a full count at the 16 us step, and they
+// move with 177712 - games play music through the timer's reload value.
+// The selected taps are NORed and gated by R177716[7].
+localparam TAP_60HZ  = 9;   // R177716[8]
+localparam TAP_250HZ = 7;   // R177716[9]
+localparam TAP_500HZ = 6;   // R177716[10]
+localparam TAP_1KHZ  = 5;   // R177716[11]
+localparam TAP_8KHZ  = 2;   // R177716[12]
+wire [4:0] grid_taps = {count_tmr[TAP_8KHZ], count_tmr[TAP_1KHZ], count_tmr[TAP_500HZ],
+                        count_tmr[TAP_250HZ], count_tmr[TAP_60HZ]};
+assign sound         = R177716[7] & ~|(R177716[12:8] & grid_taps);
 //========================================================================================
 always @(posedge pin_vm_clk_p) begin
     if(pin_vm_init_i) begin
