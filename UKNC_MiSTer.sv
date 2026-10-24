@@ -216,7 +216,7 @@ localparam CONF_STR = {
 	"O[10:8],Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"-;",
 	"-;",
-	"R[0],Reset and apply HDD;",
+	"R[0],Reset;",
 	"V,v",`BUILD_DATE 
 };
 
@@ -233,16 +233,22 @@ wire [31:0] sd_lba_sd;
 wire  [3:0] sd_rd;
 wire  [3:0] sd_wr;
 wire  [3:0] sd_ack; */
-wire [31:0] sd_lba[2] = '{sd_lba_sd,sd_lba_sd};
-wire  [1:0] sd_rd;
-wire  [1:0] sd_wr;
-wire  [1:0] sd_ack;
+wire [31:0] sd_lba_hdd;
+wire [31:0] sd_lba[3] = '{sd_lba_sd,sd_lba_sd,sd_lba_hdd};
+wire  [3:0] sd_rd_fdd;
+wire  [3:0] sd_wr_fdd;
+wire        sd_rd_hdd;
+wire        sd_wr_hdd;
+wire  [2:0] sd_rd = {sd_rd_hdd, sd_rd_fdd[1:0]};
+wire  [2:0] sd_wr = {sd_wr_hdd, sd_wr_fdd[1:0]};
+wire  [2:0] sd_ack;
 wire        sd_ack_conf;
 wire  [7:0] sd_buff_addr;   // [7:0] for 16bit BUS WIDE, [8:0] for 8bit BUS WIDE
 wire [15:0] sd_buff_dout;   // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
 wire [15:0] sd_buff_din_sd; // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
 //wire  [7:0] sd_buff_din[4] = '{sd_buff_din_sd,sd_buff_din_sd,sd_buff_din_sd,sd_buff_din_sd}; // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
-wire [15:0] sd_buff_din[2] = '{sd_buff_din_sd,sd_buff_din_sd}; // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
+wire [15:0] sd_buff_din_hdd;
+wire [15:0] sd_buff_din[3] = '{sd_buff_din_sd,sd_buff_din_sd,sd_buff_din_hdd}; // [15:0] for 16bit BUS WIDE, [7:0] for 8bit BUS WIDE
 wire        sd_buff_wr;
 
 //wire  [3:0] img_mounted;
@@ -252,11 +258,10 @@ wire [63:0] img_size;
 
 wire  [7:0] uart_mode;
 
-hps_io #(.CONF_STR(CONF_STR), .VDNUM(2), .WIDE(1)) hps_io
+hps_io #(.CONF_STR(CONF_STR), .VDNUM(3), .WIDE(1)) hps_io
 (
 	.clk_sys      (clk_25),
 	.HPS_BUS      (HPS_BUS),
-	.EXT_BUS      (EXT_BUS),
 	.gamma_bus    (gamma_bus),
 
 	.forced_scandoubler (forced_scandoubler),
@@ -283,29 +288,6 @@ hps_io #(.CONF_STR(CONF_STR), .VDNUM(2), .WIDE(1)) hps_io
 	.img_size     (img_size),
 
 	.uart_mode    (uart_mode)
-);
-
-wire [15:0] mgmt_din;
-wire [15:0] mgmt_dout;
-wire [15:0] mgmt_addr;
-wire        mgmt_rd;
-wire        mgmt_wr;
-wire  [2:0] mgmt_req;
-
-wire [35:0] EXT_BUS;
-
-hps_ext hps_ext (
-	.clk_sys      (clk_25),
-	.EXT_BUS      (EXT_BUS),
-
-	.ext_din      (mgmt_din),
-	.ext_dout     (mgmt_dout),
-	.ext_addr     (mgmt_addr),
-	.ext_rd       (mgmt_rd),
-	.ext_wr       (mgmt_wr),
-
-	.ext_req      (mgmt_req),
-	.ext_hotswap  (2'b00)
 );
 
 
@@ -366,14 +348,14 @@ UKNC UKNC (
 	.uart_tx       (UART_TXD),
 
 	.sd_lba        (sd_lba_sd),
-	.sd_rd         (sd_rd),
-	.sd_wr         (sd_wr),
-	.sd_ack        (|sd_ack),
+	.sd_rd         (sd_rd_fdd),
+	.sd_wr         (sd_wr_fdd),
+	.sd_ack        (|sd_ack[1:0]),
 	.sd_buff_addr  (sd_buff_addr),
 	.sd_buff_dout  (sd_buff_dout),
 	.sd_buff_din   (sd_buff_din_sd),
 	.sd_buff_wr    (sd_buff_wr),
-	.img_mounted   (img_mounted),   //[2:1]),
+	.img_mounted   ({2'b00, img_mounted[1:0]}),
 	.img_size      (img_size[19:0]),
 //	.img_wp        (0),
 
@@ -488,42 +470,33 @@ assign      reset_key = RESET | buttons[1] | status[0];
 //
 // IDE
 //
-logic           mgmt_ide0_cs;
 logic [2:0]     ide_addr;
 logic [15:0]    ide_writedata;
 logic [15:0]    ide_readdata;
 logic           ide_read;
 logic           ide_write;
 
-assign mgmt_ide0_cs     = (mgmt_addr[15:8] == 8'hF0);
-
 ide ide (
 	.clk           (clk_25),
 	.rst_n         (~reset_key),
 
-//	.irq           (),
-//	.drq           (),
-
-	.use_fast      (0),
-//	.no_data       (),
-
-//	.drive_en      (),
-
-	.io_address    ({1'b0,ide_addr}),
+	.io_address    (ide_addr),
 	.io_read       (ide_read),
 	.io_readdata   (ide_readdata),
 	.io_write      (ide_write),
 	.io_writedata  (ide_writedata),
-	.io_32         (0),
 
-//	.io_wait       (),
-
-	.request       (mgmt_req),
-	.mgmt_address  (mgmt_addr[3:0]),
-	.mgmt_writedata (mgmt_dout),
-	.mgmt_readdata (mgmt_din),
-	.mgmt_write    (mgmt_wr & mgmt_ide0_cs),
-	.mgmt_read     (mgmt_rd & mgmt_ide0_cs)
+	.img_mounted   (img_mounted[2]),
+	.img_readonly  (img_readonly),
+	.img_size      (img_size),
+	.sd_lba        (sd_lba_hdd),
+	.sd_rd         (sd_rd_hdd),
+	.sd_wr         (sd_wr_hdd),
+	.sd_ack        (sd_ack[2]),
+	.sd_buff_addr  (sd_buff_addr),
+	.sd_buff_dout  (sd_buff_dout),
+	.sd_buff_din   (sd_buff_din_hdd),
+	.sd_buff_wr    (sd_buff_wr)
 );
 
 endmodule
