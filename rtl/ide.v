@@ -177,10 +177,10 @@ localparam [5:0] DIV_STEPS = 6'd32;
 reg  [7:0]  geo_spt = 8'd0, geo_heads = 8'd0;
 reg  [15:0] geo_cyl = 16'd0;
 reg         geo_inv = 1'b0;
-wire [15:0] geo_hs = geo_spt * geo_heads;
+reg  [15:0] geo_hs = 16'd0;          // spt * heads, set in P_HS
 
 localparam [2:0] P_IDLE = 3'd0, P_REQ = 3'd1, P_WAIT = 3'd2, P_GEO = 3'd3,
-                 P_HEADS = 3'd4, P_CYL = 3'd5, P_DIV = 3'd6;
+                 P_HEADS = 3'd4, P_CYL = 3'd5, P_DIV = 3'd6, P_HS = 3'd7;
 reg  [2:0]  pst = P_IDLE;
 reg  [2:0]  p_after = P_IDLE;        // where P_DIV returns
 reg         p_rd = 1'b0;
@@ -216,13 +216,17 @@ always @(posedge clk) begin
             geo_inv   <= wd_inv;
             geo_spt   <= wd_inv ? ~p_w0[7:0] : p_w0[7:0];
             geo_heads <= wd_inv ? ~p_w0[15:8] : p_w0[15:8];
-            pst       <= P_CYL;
+            pst       <= P_HS;
         end
     end
     P_DIV: if(dv_cnt == 6'd0) pst <= p_after;
     P_HEADS: begin
         geo_heads <= geo_spt == 8'd0 ? 8'd0 : dv_n[7:0];
-        pst       <= P_CYL;
+        pst       <= P_HS;
+    end
+    P_HS: begin
+        geo_hs <= geo_spt * geo_heads;
+        pst    <= P_CYL;
     end
     P_CYL: begin
         // cylinders, for IDENTIFY: the WD ROM reads the drive's geometry
@@ -274,7 +278,8 @@ localparam [3:0] S_IDLE = 4'd0, S_RD_LBA1 = 4'd1, S_RD_LBA2 = 4'd2, S_RD_REQ = 4
                  S_WR_WAIT = 4'd8;
 reg  [3:0]  st = S_IDLE;
 reg         id_mode = 1'b0;      // the data register reads the IDENTIFY sector
-reg  [23:0] lba_t = 24'd0;
+reg  [31:0] lba_c = 32'd0;           // cyl * heads * spt
+reg  [12:0] lba_h = 13'd0;           // head * spt + sector
 reg  [31:0] eng_lba = 32'd0;
 reg         eng_rd = 1'b0, eng_wr = 1'b0;
 // read ahead: the bus wants the next sector (drained its own, or the
@@ -288,15 +293,25 @@ always @(posedge clk) sd_lba <= probing ? 32'd0 : eng_lba;
 assign sd_rd = eng_rd | p_rd;
 assign sd_wr = eng_wr;
 
+// heads * spt and the drive's size in sectors, for the transfer engine
+// and IDENTIFY, worked out once into registers instead of on the bus's
+// and the engine's paths.  spt_r and heads_r change only on a reset and
+// on SET CONFIG, and the two clocks these take to follow are over long
+// before the next command.
+reg  [15:0] hs_r    = 16'd0;
+reg  [31:0] total_r = 32'd0;
+always @(posedge clk) begin
+    hs_r    <= spt_r * heads_r;
+    total_r <= geo_cyl * hs_r;
+end
+
 // The IDENTIFY sector, word by word, as Hard.cpp builds it.  Strings are
 // stored with the first character in the high byte of each word.
 function [15:0] ident;
     input [7:0] w;
     input [15:0] cyl; input [7:0] hd; input [7:0] sp;
-    reg [31:0] total; reg [15:0] hs;
+    input [15:0] hs; input [31:0] total;
     begin
-        total = cyl * hd * sp;
-        hs    = hd * sp;
         case (w)
         8'd0:  ident = 16'h045a;
         8'd1:  ident = cyl;
@@ -337,6 +352,10 @@ function [15:0] ident;
     end
 endfunction
 
+// The IDENTIFY word the bus will read next, addressed ahead as bdout is
+reg  [15:0] id_dout = 16'd0;
+always @(posedge clk) id_dout <= ident(bufoff, geo_cyl, heads_r, spt_r, hs_r, total_r);
+
 // IDENTIFY reaches the software COMPLEMENTED, whatever form the image is
 // in: that is what the bus does to the drive's identify words on real
 // hardware, and WDINIT's identify loop complements every word it reads.
@@ -374,7 +393,7 @@ endtask
 // what a read gives: data words as they are, the rest as ppu.v inverts them
 always @(*) begin
     case (io_address)
-    REG_DATA:   io_readdata = id_mode ? ~ident(bufoff, geo_cyl, heads_r, spt_r) : bdout ^ inv_mask;
+    REG_DATA:   io_readdata = id_mode ? ~id_dout : bdout ^ inv_mask;
     REG_ERROR:  io_readdata = {REG_HIGH, error};
     REG_COUNT:  io_readdata = {REG_HIGH, sectorcount[7:0]};
     REG_SECTOR: io_readdata = {REG_HIGH, cursector};
@@ -508,18 +527,20 @@ always @(posedge clk) begin
         //----------------------------------------------------------------
         case (st)
         S_IDLE: ;
-        // the sector number in two multiply stages, then the request
+        // the sector number, cyl * heads * spt + head * spt + sector - 1:
+        // the two products, then their sum, then the request
         S_RD_LBA1, S_WR_LBA1: begin
             if (lba_mode) begin
                 eng_lba <= {4'd0, lba_cur};
                 st      <= (st == S_RD_LBA1) ? S_RD_REQ : S_WR_REQ;
             end else begin
-                lba_t <= curcyl * heads_r + {20'd0, curhead};
+                lba_c <= curcyl * hs_r;
+                lba_h <= curhead * spt_r + {5'd0, cursector};
                 st    <= (st == S_RD_LBA1) ? S_RD_LBA2 : S_WR_LBA2;
             end
         end
         S_RD_LBA2, S_WR_LBA2: begin
-            eng_lba <= lba_t * spt_r + {24'd0, cursector} - 32'd1;
+            eng_lba <= lba_c + {19'd0, lba_h} - 32'd1;
             st      <= (st == S_RD_LBA2) ? S_RD_REQ : S_WR_REQ;
         end
         // hps_io takes the request, raises sd_ack for the transfer and
